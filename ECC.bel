@@ -52,12 +52,12 @@ LF conv : exp → exp → type =
                conv E1 E2
 
 | conv-Π :    conv A A' →
-              {x:exp} %{typ x A' →}% conv (B x) (B' x) →
+              ({x:exp} %{typ x A' →}% conv (B x) (B' x)) →
             % ----------------------
               conv (Π A B) (Π A' B')
 
 | conv-λ :    conv A A' →
-              {x:exp} %{typ x A' →}% conv (E x) (E' x) →
+              ({x:exp} %{typ x A' →}% conv (E x) (E' x)) →
             % ----------------------
               conv (λ A E) (λ A' E')
 
@@ -67,7 +67,7 @@ LF conv : exp → exp → type =
               conv (app E1 E2) (app E1' E2')
 
 | conv-Σ :    conv A A' →
-              {x:exp} %{typ x A' →}% conv (B x) (B' x) →
+              ({x:exp} %{typ x A' →}% conv (B x) (B' x)) →
             % ----------------------
               conv (Σ A B) (Σ A' B')
 
@@ -92,9 +92,17 @@ LF conv : exp → exp → type =
               conv (iff E1 E2 E3) (iff E1' E2' E3')
 
 | conv-def :  conv E1 E1' →
-              {x:exp} eq x E1' → conv (E2 x) (E2' x) →
+              ({x:exp} eq x E1' → conv (E2 x) (E2' x)) →
             % ------------------------------
               conv (def E1 E2) (def E1' E2')
+;
+
+% Confluence
+LF confl : exp → exp → exp → type =
+| confl-conv : conv E1 E →
+               conv E2 E →
+             % -------------
+               confl E1 E2 E
 ;
 
 % Equivalence
@@ -205,7 +213,7 @@ LF typ : exp → exp → type =
                typ (def E1 E2) (B E1)
 
 | typ-sub :    typ E A →
-               typ B (Type _) →
+               %typ B (Type _) →
                sub A B →
              % -------
                typ E B
@@ -216,11 +224,44 @@ LF eval : exp → exp → type =
 | evaluate : typ E bool → value V → conv E V → eval E V
 ;
 
-% Substitution lemma
-%{
-rec lem_subst : [ ⊢ equiv A B] → [ ⊢ equiv T[A] T[B]] = ?;
-rec lem_subst : [ ⊢ equiv T[E1] T[fst (pair E1 E2 T)]] = ?;
-}%
+% Substitution lemmas
+% If A == B, then T[x:=A] == T[x:=B]
+rec lem_equiv_subst : {T:[x:exp ⊢ exp]} [ ⊢ equiv A B] → [ ⊢ equiv T[A] T[B]] =
+mlam T ⇒ fn e ⇒
+case [x:exp ⊢ T] of
+| [x:exp ⊢ Prop]     ⇒ [ ⊢ equiv-conv conv-refl conv-refl]
+| [x:exp ⊢ (Type _)] ⇒ [ ⊢ equiv-conv conv-refl conv-refl]
+| [x:exp ⊢ (Π T1[x] (\y. T2[y, x]))] ⇒ ? % FIXME: Can't prove this
+;
+
+% If A == B and ⊢ E : T[x:=A], then ⊢ E : T[x:=B]
+rec lem_typ_equiv : {T:[x:exp ⊢ exp]} [ ⊢ equiv A B] → [ ⊢ typ E T[A]] → [ ⊢ typ E T[B]] =
+mlam T ⇒ fn e ⇒ fn t ⇒
+let [ ⊢ D1] = t in
+let [ ⊢ D2] = lem_equiv_subst [x:exp ⊢ T] e in
+[ ⊢ typ-sub D1 (sub-equiv D2)]
+;
+
+% If A |>* C *<| B, then T[x:=A] |>* C' *<| T[x:=B]
+schema ctx = exp;
+rec lem_confl_subst : {γ:ctx} {T:[x:exp ⊢ exp]} [γ ⊢ confl A B C] → [γ ⊢ confl T[A] T[B] C'] =
+mlam γ ⇒ mlam T ⇒ fn c ⇒
+case [x:exp ⊢ T] of
+| [x:exp ⊢ (Π T1[x] (\y. T2[y, x]))] ⇒ % FIXME: Unclosed expression type from lem_confl_subst
+  let [γ ⊢ confl-conv D11 D12] : [γ ⊢ confl T1[A] T1[B] C1] =
+    lem_confl_subst [γ] [x:exp ⊢ T1] c in
+  let [γ, y:exp ⊢ confl-conv D21 D22] : [γ, y:exp ⊢ confl T2[y, A] T2[y, B] C2] =
+    lem_confl_subst [γ, y:exp] [x:exp ⊢ T2] in
+  [γ ⊢ confl-conv (conv-Π D11 D21) (conv-Π D12 D22)]
+;
+
+% If A |>* C *<| B and ⊢ E : T[x:=A], then ⊢ E : T[x:=B]
+rec lem_typ_confl : {T:[x:exp ⊢ exp]} [ ⊢ confl A B C] → [ ⊢ typ E T[A]] → [ ⊢ typ E T[B]] =
+mlam T ⇒ fn c ⇒ fn t ⇒
+let [ ⊢ D1] = t in % FIXME: Unclosed expression type from lem_confl_subst
+let [ ⊢ confl-conv D2 D3] = lem_confl_subst [] [x:exp ⊢ T] c in
+[ ⊢ typ-sub D1 (sub-equiv (equiv-conv D2 D3))]
+;
 
 % Subject reduction
 rec SR : [ ⊢ typ E T] → [ ⊢ red E E'] → [ ⊢ typ E' T] =
@@ -232,14 +273,16 @@ case r of
 | [ ⊢ π1] ⇒
   let [ ⊢ typ-fst (typ-pair _ _ D1 _)] = t in
   [ ⊢ D1]
-% This case doesn't work yet.
-% D2 has type B[E1], but we expect
-% the type B[fst (pair E1 E2 T)].
-% We should make use of some lemma that states
-% if A ≡ B then T[x := A] ≡ T[x := b].
 | [ ⊢ π2] ⇒
-  let [ ⊢ typ-snd (typ-pair _ _ _ D2)] = t in
-  [ ⊢ D2]
+  let [ ⊢ typ-snd D1] = t in
+  % D2 : typ E2 B[E1]
+  let [ ⊢ typ-pair _ _ _ D2] : [ ⊢ typ _ (Σ _ (\x. B))] = [ ⊢ D1] in
+  % Proof that E1 == fst (pair E1 E2 T)
+  let fst_pair = [ ⊢ equiv-conv conv-refl (conv-trans π1 conv-refl)] in
+  % Proof that E1 |>* E *<| fst (pair E1 E2 T)
+  % let fst_pair = [ ⊢ confl-conv conv-refl (conf-trans π1 conf-refl)] in
+  % D2 : E2 B[fst (pair E1 E2 T)]
+  lem_typ_equiv [x:exp ⊢ B] fst_pair [ ⊢ D2]
 | [ ⊢ ι1] ⇒
   let [ ⊢ typ-iff (\x. \d. _) _ D1 _] = t in
   [ ⊢ D1]
