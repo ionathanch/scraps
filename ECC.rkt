@@ -4,11 +4,13 @@
                     [define-judgment-form define-judgement-form]
                     [judgment-holds       judgement-holds])
          (rename-in redex-chk
-                    [redex-judgment-holds-chk redex-judgement-holds-chk]))
+                    [redex-judgment-holds-chk redex-judgement-holds-chk])
+         graph
+         rackunit)
 
 ;; TODOs
 ;; * Add some sort of η-equivalence rules to ≼
-;; * Implement checking that constraints are valid and add to infer rules (...where?)
+;; * Use `consistent?` in infer rules (...where?)
 ;; * Add tests for everything
 
 ;; REFERENCES
@@ -17,7 +19,7 @@
 ;; [2] Prop×Prop:Prop dependent pairs are "independent": https://mathoverflow.net/a/16646, https://doi.org/10.1007/bfb0018350, https://doi.org/10.1017/S0960129500001122
 
 ;; LANGUAGE
-;; Luo's Extended Calculus of Constructions with:
+;; Luo's Extended Calculus of Constructions [1] with:
 ;; * local annotated/unannotated definitions
 ;; * dependent pairs
 ;; * dependent conditionals
@@ -34,7 +36,7 @@
 
   (U ::= Prop Type (Type μ)) ;; Universes: Prop (impredicative), Type (anonymous), Type_i, Type_α
   (e A B ::= U x
-     ;; Here, x is bound to a definition.
+     ;; This means x is bound to a definition.
      ;; During reduction, we substitute all universe levels α by β.
      (x % (α ...) ↦ (β ...))
      (Π x:A B)
@@ -52,9 +54,9 @@
   (C ::= {c ...}) ;; Universe level constraint sets
   (Γ ::= · (Γ x:A) (Γ (C x:A=e))) ;; Environments
 
-  (W ::= hole (W W) (π1 W) (π2 W) ;; WHNF contexts
+  (W ::= hole (W e) (e W) (π1 W) (π2 W) ;; WHNF contexts
      (if W then e else e return (λ (x : Bool) B))
-     (let (x = W) in W) (let (x : A = W) in W))
+     (let (x = W) in e) (let (x : A = W) in e))
 
   #:binding-forms
   (x : A) #:exports x
@@ -75,7 +77,7 @@
   [(∪ C_1 C_2)
    {c_1 ... c_2 ...}
    (where {c_1 ...} C_1)
-   (where {c_2 ...} C_2)])  
+   (where {c_2 ...} C_2)])
 
 (define-metafunction ECC
   fresh : (any ...) -> α
@@ -206,17 +208,26 @@
 (define-metafunction ECC
   ▹ : Γ e -> e
   [(▹ Γ e)
-   ,(apply-reduction-relation* (⟶ (term Γ)) (term e) #:cache-all? #t)])
+   ,(let ([values (apply-reduction-relation* (⟶ (term Γ)) (term e) #:cache-all? #t)])
+      (if (empty? values)
+          #f
+          (first values)))])
 
 (define-metafunction ECC
   ▹* : Γ e -> e
   [(▹* Γ e)
-   ,(apply-reduction-relation* (⟶* (term Γ)) (term e) #:cache-all? #t)])
+   ,(let ([values (apply-reduction-relation* (⟶* (term Γ)) (term e) #:cache-all? #t)])
+      (if (empty? values)
+          #f
+          (first values)))])
 
 (define-metafunction ECC
   whnf : Γ e -> e
   [(whnf Γ e)
-   ,(apply-reduction-relation* (WHNF (term Γ)) (term e) #:cache-all? #t)])
+   ,(let ([values (apply-reduction-relation* (WHNF (term Γ)) (term e) #:cache-all? #t)])
+      (if (empty? values)
+          #f
+          (first values)))])
 
 
 ;; JUDGEMENTS
@@ -282,7 +293,7 @@
 (define-judgement-form ECC
   #:contract (infer* Γ C ⊢ e ↝ C e ⇒* A)
   #:mode (infer* I I I I I O O I O)
-  [(infer* Γ C ⊢ e ↝ C_1 e_1 ⇒ A)
+  [(infer Γ C ⊢ e ↝ C_1 e_1 ⇒ A)
    (where A_1 (whnf Γ A))
    ---------------------------------- "⇒*-whnf"
    (infer* Γ C ⊢ e ↝ C_1 e_1 ⇒* A_1)])
@@ -386,3 +397,114 @@
    (infer (Γ (C_1 (x : A_0 = e_11))) C_1 ⊢ e_2 ↝ C_2 e_22 ⇒ B)
    ------------------------------------------------------------------------------- "⇒-let:="
    (infer Γ C ⊢ (let (x : A = e_1) in e_2) ↝ C_2 (let (x : A_0 = e_11) e_22) ⇒ B)])
+
+;; CONSTRAINT-CHECKING
+
+(define-metafunction ECC
+  consistent? : C -> #t ∨ #f
+  [(consistent? C)
+   ,(no-positive-cycles? (constraints->graph (term C)))])
+
+;; Not only do we convert every constraint (μ ≤ ν) or (μ < ν)
+;; into edges from μ to ν in the form (0 μ ν) or (1 μ ν),
+;; but for every natural involved in the constraints,
+;; we need to add edges between them whose weights are their differences.
+;; For instance, if they are (0 1 3), then we need to add the edges
+;; {(1 0 1) (3 0 3) (2 1 3)}.
+(define (constraints->graph C)
+  ;; Precondition: [is] is sorted in ascending order
+  (define (int-edges is)
+    (if (empty? is) is
+        (let* ([i (first is)]
+               [js (rest is)]
+               [edges (map (λ (j) (list (- j i) i j)) js)])
+          (append edges (int-edges js)))))
+
+  (let* ([edges (map (match-lambda
+                       [(list μ '≤ ν) (list 0 μ ν)]
+                       [(list μ '< ν) (list 1 μ ν)])
+                     C)]
+         [is (foldl (λ (edge acc)
+                      (let ([from (second edge)]
+                            [to (third edge)])
+                        (cond
+                          [(and (number? from) (number? to))
+                           (cons from (cons to acc))]
+                          [(number? from) (cons from acc)]
+                          [(number? to) (cons to acc)]
+                          [else acc])))
+                    '() edges)]
+         [edges (append edges (int-edges (sort is <)))])
+    (weighted-graph/directed edges)))
+
+(module+ test
+  (define C ;; from inferring (Π (x : Type) (Type 2))
+    (term {(0 ≤ α1) (α1 < α) (2 < α2) (α ≤ α3) (α2 ≤ α3)}))
+  (define G ;; expected graph
+    (constraints->graph C))
+  (define edges ;; expected edges
+    '((0 0 α1) (1 α1 α) (1 2 α2) (0 α α3) (0 α2 α3) (2 0 2)))
+
+  (check-true (andmap
+               (λ (edge)
+                 (= (first edge)
+                    (edge-weight G (second edge) (third edge))))
+               edges)))
+
+(define (no-positive-cycles? G)
+  (define-vertex-property G status #:init 'unvisited)
+  (define-vertex-property G total-weight #:init 0)
+  (define (unvisited? s) (symbol=? s 'unvisited))
+  (define (visiting? s) (symbol=? s 'visiting))
+  (define (weight u v) (edge-weight G u v))
+
+  (do-dfs G
+    #:break: (and (visiting? (status $v))
+                  (positive? (- (+ (total-weight $from)
+                                   (weight $from $to))
+                                (total-weight $to))))
+    #:visit?: (unvisited? (status $v))
+    #:prologue: (begin
+                  (status-set! $v 'visiting)
+                  (total-weight-set!
+                   $v (if $from
+                          (+ (weight $from $to)
+                             (total-weight $from))
+                          0)))
+    #:epilogue: (status-set! $v 'visited)
+    #:return: (not $broke?)))
+
+(module+ test
+  ;; Simple nonpositive-cycled graphs
+  (define SNCG1
+    (directed-graph '((a b) (b c) (c a)) '(0 0 0)))
+  (define SNCG2
+    (directed-graph '((a b) (b c) (c a)) '(0 -1 1)))
+
+  ;; Complex nonpositive-cycled graphs
+  (define CNCG1
+    (directed-graph '((a b) (b c) (c d) (d b)) '(0 -1 0 1)))
+  (define CNCG2
+    (directed-graph '((a b) (b c) (c d) (d b) (d e) (e a)) '(0 -1 0 1 0 -1)))
+
+  ;; Simple positive-cycled graphs
+  (define SPCG1
+    (directed-graph '((a b) (b c) (c a)) '(0 0 1)))
+  (define SPCG2
+    (directed-graph '((a b) (b c) (c a)) '(-1 0 2)))
+
+  ;; Complex positive-cycled graphs
+  (define CPCG1
+    (directed-graph '((a b) (b c) (c d) (d b)) '(0 0 0 1)))
+  (define CPCG2
+    (directed-graph '((a b) (b c) (c d) (d b) (d e) (e a)) '(0 -1 0 1 0 2)))
+
+  (check-true (no-positive-cycles? SNCG1))
+  (check-true (no-positive-cycles? SNCG2))
+  (check-true (no-positive-cycles? CNCG1))
+  (check-true (no-positive-cycles? CNCG2))
+
+  (check-false (no-positive-cycles? SPCG1))
+  (check-false (no-positive-cycles? SPCG2))
+  (check-false (no-positive-cycles? CPCG1))
+  (check-false (no-positive-cycles? CPCG2)))
