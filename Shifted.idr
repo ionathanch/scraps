@@ -44,8 +44,8 @@ record Name where
 -- (level 0 is the outermost, level (n-1) is the innermost).
 -- We restrict levels to the range [0, n-1] using finite sets.
 data Var : Nat -> Type where
-  Bound : Fin n -> Var n
-  Free : Name -> Var n
+  Bound : Fin k -> Var k
+  Free : Name -> Var k
 
 
 -- HELPERS
@@ -88,21 +88,21 @@ unshift_name a b =
 
 -- PRIMITIVE OPERATIONS
 
-open_var : Name -> Var (S n) -> Var n
+open_var : Name -> Var (S k) -> Var k
 open_var name (Bound FZ) = Free name
 open_var name (Bound (FS fin)) = Bound fin
 open_var name (Free free) = Free $ shift_name name free
 
-close_var : Name -> Var n -> Var (S n)
+close_var : Name -> Var k -> Var (S k)
 close_var bound (Bound fin) = Bound (FS fin)
 close_var name (Free free) = maybe (Bound FZ) Free $ unshift_name name free
 
-bind_var : Var (S n) -> Maybe (Var n)
+bind_var : Var (S k) -> Maybe (Var k)
 bind_var (Bound FZ) = Nothing
 bind_var (Bound (FS fin)) = Just $ Bound fin
 bind_var (Free free) = Just $ Free free
 
-wk_var : Var n -> Var (S n)
+wk_var : Var k -> Var (S k)
 wk_var (Bound fin) = Bound (FS fin)
 wk_var (Free free) = Free free
 
@@ -112,15 +112,15 @@ wk_var (Free free) = Free free
 -- bind u . wk = identity
 
 -- rename free variable x as y = close x, then open as y
-rename_var : Name -> Name -> Var n -> Var n
+rename_var : Name -> Name -> Var k -> Var k
 rename_var old_name new_name = open_var new_name . close_var old_name
 
 -- substitute free variable x by value u = close x, then bind u
-subst_var : Name -> Var n -> Maybe (Var n)
+subst_var : Name -> Var k -> Maybe (Var k)
 subst_var name = bind_var . close_var name
 
 -- shift x = make x be a fresh free variable = add bound variable, then open as x
-shift_var : Name -> Var n -> Var n
+shift_var : Name -> Var k -> Var k
 shift_var name = open_var name . wk_var
 
 
@@ -145,22 +145,22 @@ shift_distinct_name : (a, b: Name) -> distinct_names a b -> shift_name a b = b
 unshift_shift_name : (a, b: Name) -> unshift_name a (shift_name a b) = Just b
 
 -- Theorem: bind . wk should do nothing.
-bind_wk_var : (x: Var n) -> bind_var (wk_var x) = Just x
+bind_wk_var : (x: Var k) -> bind_var (wk_var x) = Just x
 
 -- Theorem: Renaming a variable by itself should do nothing.
-rename_refl_var : (a: Name) -> (x: Var n) -> rename_var a a x = x
+rename_refl_var : (a: Name) -> (x: Var k) -> rename_var a a x = x
 
 -- Theorem: Renaming should be transitive.
-rename_trans_var : (a, b, c: Name) -> (x: Var n) -> rename_var b c (rename_var a b x) = rename_var a c x
+rename_trans_var : (a, b, c: Name) -> (x: Var k) -> rename_var b c (rename_var a b x) = rename_var a c x
 
 -- Theorem: Renaming a variable and then renaming it back should do nothing.
-rename_symm_var : (a, b: Name) -> (x: Var n) -> rename_var b a (rename_var a b x) = x
+rename_symm_var : (a, b: Name) -> (x: Var k) -> rename_var b a (rename_var a b x) = x
 
 -- Theorem: Renaming then substituting should be the same as substituting the original variable.
-subst_rename_var : (a, b: Name) -> (x: Var n) -> subst_var b (rename_var a b x) = subst_var a x
+subst_rename_var : (a, b: Name) -> (x: Var k) -> subst_var b (rename_var a b x) = subst_var a x
 
 -- Theorem: Substituting an unused variable should do nothing.
-subst_shift_var : (a: Name) -> (x: Var n) -> subst_var a (shift_var a x) = Just x
+subst_shift_var : (a: Name) -> (x: Var k) -> subst_var a (shift_var a x) = Just x
 
 -- Theorem: Summoning free variable b after renaming from a is the same as summoning free variable a.
-shift_rename_var : (a, b: Name) -> (x: Var n) -> shift_var b (rename_var a b x) = shift_var a
+shift_rename_var : (a, b: Name) -> (x: Var k) -> shift_var b (rename_var a b x) = shift_var a
