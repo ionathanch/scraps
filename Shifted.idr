@@ -39,8 +39,8 @@ import Data.Fin
 Index : Type
 Index = Nat
 
--- A Name is an identifier + an index;
--- shadowed names have different indices.
+||| A Name is an identifier + an index;
+||| shadowed names have different indices.
 record Name where
   constructor mkName
   name : String
@@ -49,11 +49,11 @@ record Name where
 Eq Name where
   n1 == n2 = n1.name == n2.name && n1.index == n2.index
 
--- Locally-nameless representation of variables:
--- free variables are named, but
--- bound variables are represented using de Bruijn levels
--- (level 0 is the outermost, level (n-1) is the innermost).
--- We restrict levels to the range [0, n-1] using finite sets.
+||| Locally-nameless representation of variables:
+||| free variables are named, but
+||| bound variables are represented using de Bruijn levels
+||| (level 0 is the outermost, level (n-1) is the innermost).
+||| We restrict levels to the range [0, n-1] using finite sets.
 data Var : Nat -> Type where
   Bound : Fin k -> Var k
   Free : Name -> Var k
@@ -81,35 +81,41 @@ interface Term (t : Nat -> Type) where
 
 -- HELPERS
 
--- shift_index i j = if i <= j then j + 1 else j
--- where i is the new open index, j is the shifted index
--- Increment name index only if the current index is <= the one being opened.
+||| shift_index i j = if i <= j then j + 1 else j
+||| @ i the new open index
+||| @ j the shifted index
+||| Increment name index only if the current index is <= the one being opened.
 shift_index : Index -> Index -> Index
 shift_index Z j = (S j)
 shift_index i Z = Z
 shift_index (S i) (S j) = S (shift_index i j)
 
--- unshift_index i j = if i == j then None else if i < j then j - 1 else j
--- where i is the close index, j is the shifted index
--- Decrement index only if the current index is <= the one being opened,
--- and > 0, and not the same as the one being closed.
--- Because the free variable being closed would have become a bound variable,
--- we never need to shift a name with the same index.
--- Also, shift will never open to a name with index Z, so we would never close it.
+||| unshift_index i j = if i == j then None else if i < j then j - 1 else j
+||| @ i the close index
+||| @ j the shifted index
+||| Decrement index only if the current index is <= the one being opened,
+||| and > 0, and not the same as the one being closed.
+||| Because the free variable being closed would have become a bound variable,
+||| we never need to shift a name with the same index.
+||| Also, shift will never open to a name with index Z, so we would never close it.
 unshift_index : Index -> Index -> Maybe Index
 unshift_index Z Z = Nothing
 unshift_index Z (S j) = Just j
 unshift_index _ Z = Just Z
 unshift_index (S i) (S j) = S <$> unshift_index i j
 
--- shift_name a b shifts b's index only if a and b's names collide
-shift_name : Name -> Name -> Name
+||| @ a the name being opened
+||| @ b the name being shifted
+||| Shift b's index only if a and b's names collide.
+  shift_name : Name -> Name -> Name
 shift_name a b =
   if a.name == b.name
   then mkName b.name (shift_index a.index b.index)
   else b
 
--- unshift_name a b unshift's b's index only if a and b's names collide
+||| @ a the name being closed
+||| @ b the name being shifted
+||| Unshift b's index only if a and b's names collide
 unshift_name : Name -> Name -> Maybe Name
 unshift_name a b =
   if a.name == b.name
@@ -174,18 +180,23 @@ where
 
 -- DERIVED TERM OPERATIONS
 
--- rename old new renames old to new by
--- turning old into a bound variable, then opening it as new
+||| @ old the name to be replaced
+||| @ new the name to replace with
+||| Rename `old` to `new` by turning `old` into
+||| a bound variable then opening it as `new`.
 rename : Term t => {k: Nat} -> Name -> Name -> t k -> t k
 rename old new = open_term new . close_term old
 
--- subst name u substitutes free variable name for u
--- in a capture-avoiding manner, since u gets shifted by wkk
+||| @ name the name to be replaced
+||| @ u the term to replace with
+||| Substitute in a capture-avoiding manner
+||| (since `wkk` will shift `u` up as needed).
 subst : Term t => {k: Nat} -> Name -> t Z -> t k -> t k
 subst name u = bind_term u . close_term name
 
--- shift name ensures that name is fresh by
--- introducing a new binding and then opening it as name
+||| @ name the fresh name
+||| Ensure that `name` is fresh by
+||| creating a new binding and opening it as `name`.
 shift : Term t => {k: Nat} -> Name -> t k -> t k
 shift name = open_term name . wk_term
 
@@ -228,6 +239,8 @@ close_open_var : {a: Name} -> {x: Var (S k)} -> close_var a (open_var a x) = x
 
 -- Theorem: bind_var . wk_var should do nothing.
 bind_wk_var : {x: Var k} -> bind_var (wk_var x) = Just x
+bind_wk_var {x = Bound l} = Refl
+bind_wk_var {x = Free a} = Refl
 
 -- Theorem: Opening and closing a name are inverses.
 open_close : Term t => {a: Name} -> {e: t k} -> open_term a (close_term a e) = e
