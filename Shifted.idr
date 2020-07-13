@@ -19,6 +19,15 @@
     * Reference implementation: https://github.com/lpw25/shifted-names
   [2] The Locally Nameless Representation: http://www.chargueraud.org/research/2009/ln/main.pdf
   [3] Type and Scope Safe Syntaxes: https://arxiv.org/abs/2001.11001
+
+  Variable convention:
+  * i, j for Name indices
+  * a, b for Names
+  * l for de Bruijn levels
+  * k, n, m for Var/Term type indices (binding depth)
+  * x, y for Vars
+  * t for the abstract Term type
+  * e, u for Terms (the latter for substituted Terms)
 -}
 
 import Data.Fin
@@ -51,8 +60,24 @@ data Var : Nat -> Type where
 
 Eq (Var k) where
   Bound l1 == Bound l2 = l1 == l2
-  Free n1 == Free n2 = n1 == n2
+  Free a1 == Free a2 = a1 == a2
   _ == _ = False
+
+-- Needed for push/pop (it should be in a Nat library somewhere...).
+plus_comm_S : (n, m: Nat) -> n + S m = S (n + m)
+plus_comm_S Z _ = Refl
+plus_comm_S (S n) m = rewrite plus_comm_S n m in Refl
+
+interface Term (t : Nat -> Type) where
+  pop : t (S (n + m)) -> t (n + S m)
+  pop e = rewrite plus_comm_S n m in e
+
+  push : t (n + S m) -> t (S (n + m))
+  push e = rewrite sym $ plus_comm_S n m in e
+
+  unit : Var k -> t k
+  kmap : ({k: Nat} -> Var (n + k) -> t (m + k)) -> ({k: Nat} -> t (n + k) -> t (m + k))
+
 
 -- HELPERS
 
@@ -92,25 +117,77 @@ unshift_name a b =
   else Just b
 
 
--- PRIMITIVE OPERATIONS
+-- PRIMITIVE VAR OPERATIONS
 
 open_var : Name -> Var (S k) -> Var k
 open_var name (Bound FZ) = Free name
-open_var name (Bound (FS fin)) = Bound fin
-open_var name (Free free) = Free $ shift_name name free
+open_var name (Bound (FS l)) = Bound l
+open_var name (Free a) = Free $ shift_name name a
 
 close_var : Name -> Var k -> Var (S k)
-close_var bound (Bound fin) = Bound (FS fin)
-close_var name (Free free) = maybe (Bound FZ) Free $ unshift_name name free
+close_var bound (Bound l) = Bound (FS l)
+close_var name (Free a) = maybe (Bound FZ) Free $ unshift_name name a
 
 wk_var : Var k -> Var (S k)
-wk_var (Bound fin) = Bound (FS fin)
-wk_var (Free free) = Free free
+wk_var (Bound l) = Bound (FS l)
+wk_var (Free a) = Free a
 
 bind_var : Var (S k) -> Maybe (Var k)
 bind_var (Bound FZ) = Nothing
-bind_var (Bound (FS fin)) = Just $ Bound fin
-bind_var (Free free) = Just $ Free free
+bind_var (Bound (FS l)) = Just $ Bound l
+bind_var (Free a) = Just $ Free a
+
+
+-- PRIMITIVE TERM OPERATIONS
+
+open_term : Term t => {k: Nat} -> Name -> t (S k) -> t k
+open_term name = kmap {n = S Z} {m = Z} (unit . open_var name)
+
+close_term : Term t => {k: Nat} -> Name -> t k -> t (S k)
+close_term name = kmap {n = Z} {m = S Z} (unit . close_var name)
+
+wk_term : Term t => {k: Nat} -> t k -> t (S k)
+wk_term = kmap {n = Z} {m = S Z} (unit . wk_var)
+
+{-
+  A note about bind:
+  When replacing an identifier of type Exp k with the expression e,
+  the type of e needs to be Exp k as well. To enforce this, we first
+  assume that e's type is Exp Z, and then we wk k times on e so that
+  its type becomes Exp k. This is safe to do, since wk only introduces
+  unused bound variables.
+  In wkk, because we destruct on the implicit variable k,
+  it has to be non-erased, i.e. {k: Nat} instead of forall k.
+  This means that it has to be non-erased in basically everything as well.
+-}
+
+wkk_term : Term t => {k: Nat} -> t Z -> t k
+wkk_term {k = Z} e = e
+wkk_term {k = S k'} e = wk_term (wkk_term {k = k'} e)
+
+bind_term : Term t => {k: Nat} -> t Z -> t (S k) -> t k
+bind_term u = kmap {n = S Z} {m = Z} bind
+where
+  bind : {k: Nat} -> Var (S k) -> t k
+  bind = (maybe (wkk_term u) unit . bind_var)
+
+
+-- DERIVED TERM OPERATIONS
+
+-- rename old new renames old to new by
+-- turning old into a bound variable, then opening it as new
+rename : Term t => {k: Nat} -> Name -> Name -> t k -> t k
+rename old new = open_term new . close_term old
+
+-- subst name u substitutes free variable name for u
+-- in a capture-avoiding manner, since u gets shifted by wkk
+subst : Term t => {k: Nat} -> Name -> t Z -> t k -> t k
+subst name u = bind_term u . close_term name
+
+-- shift name ensures that name is fresh by
+-- introducing a new binding and then opening it as name
+shift : Term t => {k: Nat} -> Name -> t k -> t k
+shift name = open_term name . wk_term
 
 
 -- PROPERTIES and LEMMAS
@@ -145,9 +222,34 @@ unshift_shift_name : {a, b: Name} -> unshift_name a (shift_name a b) = Just b
 -- Theorem: Shifting an unshifted name should do nothing. TODO: Maybe this should use a = b instead of a == b?
 shift_unshift_name : {a, b: Name} -> shift_name a <$> unshift_name a b = if a == b then Nothing else Just b 
 
--- Theorem: open and close are inverses.
-open_close : {a: Name} -> {x: Var k} -> open_var a (close_var a x) = x
-close_open : {a: Name} -> {x: Var (S k)} -> close_var a (open_var a x) = x
+-- Theorem: Opening and closing a name in variables are inverses.
+open_close_var : {a: Name} -> {x: Var k} -> open_var a (close_var a x) = x
+close_open_var : {a: Name} -> {x: Var (S k)} -> close_var a (open_var a x) = x
 
--- Theorem: bind . wk should do nothing.
+-- Theorem: bind_var . wk_var should do nothing.
 bind_wk_var : {x: Var k} -> bind_var (wk_var x) = Just x
+
+-- Theorem: Opening and closing a name are inverses.
+open_close : Term t => {a: Name} -> {e: t k} -> open_term a (close_term a e) = e
+close_open : Term t => {a: Name} -> {e: t (S k)} -> close_term a (open_term a e) = e
+
+-- Theorem: Binding to a new unused bound variable should do nothing.
+bind_wk : Term t => {u, e: t Z} -> bind_term u (wk_term e) = e
+
+-- Theorem: Renaming a variable by itself should do nothing.
+rename_refl : Term t => {a: Name} -> {e: t k} -> rename a a e = e
+
+-- Theorem: Renaming should be transitive.
+rename_trans : Term t => {a, b, c: Name} -> {e: t k} -> rename b c (rename a b e) = rename a c e
+
+-- Theorem: Renaming a variable and then renaming it back should do nothing.
+rename_symm : Term t => {a, b: Name} -> (e: t k) -> rename b a (rename a b e) = e
+
+-- Theorem: Renaming then substituting should be the same as substituting the original variable.
+subst_rename : Term t => {a, b: Name} -> {u: t Z} -> subst b (rename a b u) = subst a u
+
+-- Theorem: Substituting an unused variable should do nothing.
+subst_shift : Term t => {a: Name} -> {u: t Z} -> subst a (shift a u) = Just u
+
+-- Theorem: Summoning free variable b after renaming from a is the same as summoning free variable a.
+shift_rename : Term t => {a, b: Name} -> {e: t k} -> shift b (rename a b e) = shift a e
