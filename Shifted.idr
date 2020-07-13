@@ -25,7 +25,6 @@ import Data.Fin
 
 %default total
 
-
 -- DEFINITIONS
 
 Index : Type
@@ -38,6 +37,9 @@ record Name where
   name : String
   index : Index
 
+Eq Name where
+  n1 == n2 = n1.name == n2.name && n1.index == n2.index
+
 -- Locally-nameless representation of variables:
 -- free variables are named, but
 -- bound variables are represented using de Bruijn levels
@@ -47,6 +49,10 @@ data Var : Nat -> Type where
   Bound : Fin k -> Var k
   Free : Name -> Var k
 
+Eq (Var k) where
+  Bound l1 == Bound l2 = l1 == l2
+  Free n1 == Free n2 = n1 == n2
+  _ == _ = False
 
 -- HELPERS
 
@@ -97,34 +103,17 @@ close_var : Name -> Var k -> Var (S k)
 close_var bound (Bound fin) = Bound (FS fin)
 close_var name (Free free) = maybe (Bound FZ) Free $ unshift_name name free
 
+wk_var : Var k -> Var (S k)
+wk_var (Bound fin) = Bound (FS fin)
+wk_var (Free free) = Free free
+
 bind_var : Var (S k) -> Maybe (Var k)
 bind_var (Bound FZ) = Nothing
 bind_var (Bound (FS fin)) = Just $ Bound fin
 bind_var (Free free) = Just $ Free free
 
-wk_var : Var k -> Var (S k)
-wk_var (Bound fin) = Bound (FS fin)
-wk_var (Free free) = Free free
 
-
--- DERIVED OPERATIONS
-
--- bind u . wk = identity
-
--- rename free variable x as y = close x, then open as y
-rename_var : Name -> Name -> Var k -> Var k
-rename_var old_name new_name = open_var new_name . close_var old_name
-
--- substitute free variable x by value u = close x, then bind u
-subst_var : Name -> Var k -> Maybe (Var k)
-subst_var name = bind_var . close_var name
-
--- shift x = make x be a fresh free variable = add bound variable, then open as x
-shift_var : Name -> Var k -> Var k
-shift_var name = open_var name . wk_var
-
-
--- PROPERTIES and LEMMATA
+-- PROPERTIES and LEMMAS
 
 -- Theorem: Unshifting a shifted index should do nothing.
 unshift_shift_index : (i, j: Index) -> unshift_index i (shift_index i j) = Just j
@@ -136,31 +125,29 @@ indistinct_names : (a, b: Name) -> Type
 indistinct_names a b = a.name = b.name
 
 distinct_names : (a, b: Name) -> Type
-distinct_names a b = a.name = b.name -> Void
+distinct_names a b = (a.name = b.name) -> Void
 
--- Lemma: Shifting something with a distinct name should do nothing.
-shift_distinct_name : (a, b: Name) -> distinct_names a b -> shift_name a b = b
+-- Lemma: Shifting something with a different name should do nothing.
+shift_distinct_name : {a, b: Name} -> distinct_names a b -> shift_name a b = b
+
+-- Lemma: Shifting something with the same name shifts the index.
+shift_indistinct_name : {a, b: Name} -> indistinct_names a b -> shift_name a b = mkName b.name (shift_index a.index b.index)
+
+-- Lemma: Unshifting something with a different name should do nothing.
+unshift_distinct_name : {a, b: Name} -> distinct_names a b -> unshift_name a b = Just b
+
+-- Lemma: Unshifting something with the same name shifts the index unless they are the same.
+unshift_indistinct_name : {a, b: Name} -> indistinct_names a b -> unshift_name a b = mkName b.name <$> (unshift_index a.index b.index)
 
 -- Theorem: Unshifting a shifted name should do nothing.
-unshift_shift_name : (a, b: Name) -> unshift_name a (shift_name a b) = Just b
+unshift_shift_name : {a, b: Name} -> unshift_name a (shift_name a b) = Just b
+
+-- Theorem: Shifting an unshifted name should do nothing. TODO: Maybe this should use a = b instead of a == b?
+shift_unshift_name : {a, b: Name} -> shift_name a <$> unshift_name a b = if a == b then Nothing else Just b 
+
+-- Theorem: open and close are inverses.
+open_close : {a: Name} -> {x: Var k} -> open_var a (close_var a x) = x
+close_open : {a: Name} -> {x: Var (S k)} -> close_var a (open_var a x) = x
 
 -- Theorem: bind . wk should do nothing.
-bind_wk_var : (x: Var k) -> bind_var (wk_var x) = Just x
-
--- Theorem: Renaming a variable by itself should do nothing.
-rename_refl_var : (a: Name) -> (x: Var k) -> rename_var a a x = x
-
--- Theorem: Renaming should be transitive.
-rename_trans_var : (a, b, c: Name) -> (x: Var k) -> rename_var b c (rename_var a b x) = rename_var a c x
-
--- Theorem: Renaming a variable and then renaming it back should do nothing.
-rename_symm_var : (a, b: Name) -> (x: Var k) -> rename_var b a (rename_var a b x) = x
-
--- Theorem: Renaming then substituting should be the same as substituting the original variable.
-subst_rename_var : (a, b: Name) -> (x: Var k) -> subst_var b (rename_var a b x) = subst_var a x
-
--- Theorem: Substituting an unused variable should do nothing.
-subst_shift_var : (a: Name) -> (x: Var k) -> subst_var a (shift_var a x) = Just x
-
--- Theorem: Summoning free variable b after renaming from a is the same as summoning free variable a.
-shift_rename_var : (a, b: Name) -> (x: Var k) -> shift_var b (rename_var a b x) = shift_var a
+bind_wk_var : {x: Var k} -> bind_var (wk_var x) = Just x
