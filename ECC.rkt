@@ -405,37 +405,38 @@
   [(consistent? C)
    ,(no-positive-cycles? (constraints->graph (term C)))])
 
-;; Not only do we convert every constraint (μ ≤ ν) or (μ < ν)
-;; into edges from μ to ν in the form (0 μ ν) or (1 μ ν),
-;; but for every natural involved in the constraints,
-;; we need to add edges between them whose weights are their differences.
-;; For instance, if they are (0 1 3), then we need to add the edges
-;; {(1 0 1) (3 0 3) (2 1 3)}.
+;; Not only do we convert every constraint (α ≤ β) or (α < β)
+;; into edges from α to β in the form (0 α β) or (1 α β),
+;; but for every constraint involving naturals,
+;; we translate it to a constraint involving only the 0 node.
+;; Specifically, we have the following:
+;;   (i ≤ β) ⇒ ((+ 0 i) 0 β); (i < β) ⇒ ((+ 1 i) 0 β)
+;;   (α ≤ j) ⇒ ((- 0 j) α 0); (α < j) ⇒ ((- 1 j) α 0)
 (define (constraints->graph C)
-  ;; Precondition: [is] is sorted in ascending order
-  (define (int-edges is)
-    (if (empty? is) is
-        (let* ([i (first is)]
-               [js (rest is)]
-               [edges (map (λ (j) (list (- j i) i j)) js)])
-          (append edges (int-edges js)))))
-
-  (let* ([edges (map (match-lambda
-                       [(list μ '≤ ν) (list 0 μ ν)]
-                       [(list μ '< ν) (list 1 μ ν)])
-                     C)]
-         [is (foldl (λ (edge acc)
-                      (let ([from (second edge)]
-                            [to (third edge)])
-                        (cond
-                          [(and (number? from) (number? to))
-                           (cons from (cons to acc))]
-                          [(number? from) (cons from acc)]
-                          [(number? to) (cons to acc)]
-                          [else acc])))
-                    '() edges)]
-         [edges (append edges (int-edges (sort is <)))])
-    (weighted-graph/directed edges)))
+  (define has-pos-cycle? #f)
+  (define edges
+    (filter-map
+     (match-lambda
+       [(list (? number? i) '≤ (? number? j))
+        #:when (<= i j) #f]
+       [(list (? number? i) '< (? number? j))
+        #:when (< i j)  #f]
+       [(list (? number? i) _ (? number? j))
+        (begin (set! has-pos-cycle? #t) #f)]
+       [(list (? number? i) '≤ (? symbol? β))
+        (list i 0 β)]
+       [(list (? number? i) '< (? symbol? β))
+        (list (+ 1 i) 0 β)]
+       [(list (? symbol? α) '≤ (? number? j))
+        (list (- j) α 0)]
+       [(list (? symbol? α) '< (? number? j))
+        (list (- 1 j) α 0)]
+       [(list α '≤ β) (list 0 α β)]
+       [(list α '< β) (list 1 α β)])
+     C))
+  (define edges*
+    (if has-pos-cycle? (cons '(1 0 0) edges) edges))
+  (weighted-graph/directed edges*))
 
 (module+ test
   (define C ;; from inferring (Π (x : Type) (Type 2))
@@ -443,7 +444,7 @@
   (define G ;; expected graph
     (constraints->graph C))
   (define edges ;; expected edges
-    '((0 0 α1) (1 α1 α) (1 2 α2) (0 α α3) (0 α2 α3) (2 0 2)))
+    '((0 0 α1) (1 α1 α) (3 0 α2) (0 α α3) (0 α2 α3)))
 
   (check-true (andmap
                (λ (edge)
@@ -475,6 +476,14 @@
     #:return: (not $broke?)))
 
 (module+ test
+  ;; Constant constraints
+  (define CC1
+    (constraints->graph '((1 < 5) (2 ≤ 2) (3 ≤ 4))))
+  (define CC2
+    (constraints->graph '((1 ≤ 0))))
+  (define CC3
+    (constraints->graph '((1 < 1))))
+  
   ;; Simple nonpositive-cycled graphs
   (define SNCG1
     (directed-graph '((a b) (b c) (c a)) '(0 0 0)))
@@ -499,11 +508,14 @@
   (define CPCG2
     (directed-graph '((a b) (b c) (c d) (d b) (d e) (e a)) '(0 -1 0 1 0 2)))
 
+  (check-true (no-positive-cycles? CC1))
   (check-true (no-positive-cycles? SNCG1))
   (check-true (no-positive-cycles? SNCG2))
   (check-true (no-positive-cycles? CNCG1))
   (check-true (no-positive-cycles? CNCG2))
 
+  (check-false (no-positive-cycles? CC2))
+  (check-false (no-positive-cycles? CC3))
   (check-false (no-positive-cycles? SPCG1))
   (check-false (no-positive-cycles? SPCG2))
   (check-false (no-positive-cycles? CPCG1))
