@@ -75,9 +75,9 @@ data Red : Env -> Expr k -> Expr k -> Type where
   Zeta  : Red _ (Let u e) (bind_term u e)
 
 data Conv : Env -> Expr k -> Expr k -> Type where
-  Refl      : Conv _ e e
+  ConvRefl  : Conv _ e e
 
-  Trans     : Red g e e' ->
+  ConvTrans : Red g e e' ->
               Conv g e' e'' ->
               ----------------
               Conv g e e''
@@ -128,19 +128,51 @@ data Conv : Env -> Expr k -> Expr k -> Type where
               Conv g (Let e1 e2) (Let e1' e2')
 
 data Equiv : Env -> Expr k -> Expr k -> Type where
-  Confl : Conv g e1 e ->
-          Conv g e2 e ->
-          -------------
-          Equiv g e1 e2
+  EquivConv : Conv g e1 e ->
+              Conv g e2 e ->
+              -------------
+              Equiv g e1 e2
 
-  Eta1  : Conv g e1 (Abs a e) ->
-          Conv g e2 e2' ->
-          Equiv (Cons g x (Ass a)) (open_term x e) (App e2' (toVar x)) ->
-          -------------
-          Equiv g e1 e2
+  EquivEta1 : Conv g e1 (Abs a e) ->
+              Conv g e2 e2' ->
+              Equiv (Cons g x (Ass a)) (open_term x e) (App e2' (toVar x)) ->
+              -------------
+              Equiv g e1 e2
 
-  Eta2  : Conv g e1 e1' ->
-          Conv g e2 (Abs a e) ->
-          Equiv (Cons g x (Ass a)) (App e1' (toVar x)) (open_term x e) ->
-          -------------
-          Equiv g e1 e2
+  EquivEta2 : Conv g e1 e1' ->
+              Conv g e2 (Abs a e) ->
+              Equiv (Cons g x (Ass a)) (App e1' (toVar x)) (open_term x e) ->
+              -------------
+              Equiv g e1 e2
+
+
+-- TYPING
+
+data Subtypes : Env -> Expr k -> Expr k -> Type where
+  STEquiv : Equiv g e1 e2 ->
+            ---------------
+            Subtypes g e1 e2
+
+  STTrans : Subtypes g a b ->
+            Subtypes g b c ->
+            --------------
+            Subtypes g a c
+
+  STProp  : Subtypes _ Prop (Typ Z)
+
+  STCum   : Subtypes _ (Typ i) (Typ (S i))
+
+  STPi    : Equiv g a1 a2 ->
+            Subtypes (Cons g x (Ass a2)) (open_term x b1) (open_term x b2) ->
+            --------------------------------
+            Subtypes g (Pi a1 b1) (Pi a2 b2)
+
+  STSig   : Subtypes a a1 a2 ->
+            Subtypes (Cons g x (Ass a2)) (open_term x b1) (open_term x b2) ->
+            --------------------------------------
+            Subtypes g (Sigma a1 b1) (Sigma a2 b2)
+
+data Types : Env -> Expr k -> Expr k -> Type where
+  TId : has g x (Ass a) ->
+        ----------------
+        Types g (Id x) a
