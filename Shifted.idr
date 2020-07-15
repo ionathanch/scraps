@@ -28,6 +28,7 @@
   * x, y for Vars
   * t for the abstract Term type
   * e, u for Terms (the latter for substituted Terms)
+  * a, b also for Terms that are types
 -}
 
 import Data.Fin
@@ -107,7 +108,7 @@ unshift_index (S i) (S j) = S <$> unshift_index i j
 ||| @ a the name being opened
 ||| @ b the name being shifted
 ||| Shift b's index only if a and b's names collide.
-  shift_name : Name -> Name -> Name
+shift_name : Name -> Name -> Name
 shift_name a b =
   if a.name == b.name
   then mkName b.name (shift_index a.index b.index)
@@ -199,6 +200,20 @@ subst name u = bind_term u . close_term name
 ||| creating a new binding and opening it as `name`.
 shift : Term t => {k: Nat} -> Name -> t k -> t k
 shift name = open_term name . wk_term
+
+
+-- CONTEXTS
+
+data Context : Type -> Type where
+  Empty : Context t
+  Cons : Context t -> Name -> t -> Context t
+
+has : Context t -> Var Z -> t -> Type
+has Empty _ _ = Void
+has (Cons ctx y b) x a =
+  case bind_var (close_var y x) of
+    Nothing => b = a
+    Just x' => has ctx x' a
 
 
 -- PROPERTIES and LEMMAS

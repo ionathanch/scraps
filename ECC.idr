@@ -39,3 +39,108 @@ Term Expr where
   kmap _ False           = False
   kmap f (If e1 e2 e3)   = If    (kmap f e1) (kmap f e2) (kmap f e3)
   kmap f (Let e1 e2)     = Let   (kmap f e1) (push (kmap f (assert_smaller e2 (pop e2))))
+-- We can give Let expressions type annotations, but we want to keep it as small as possible.
+
+-- Make a variable out of a name.
+toVar : Name -> Expr k
+toVar name = Id (Free name)
+
+
+-- ENVIRONMENTS
+
+data Decl = Ass (Expr Z) | Def (Expr Z)
+
+Env : Type
+Env = Context Decl
+
+-- Note that definitions in the environment aren't typed.
+-- This is because Let expressions aren't type annotated,
+-- So during conversion, there's no type to stick into
+-- the environment, not unless we provide a proof that
+-- the bound term has a certain type.
+data Declares : Env -> Var 0 -> Expr Z -> Type where
+  Assumes : has g x (Ass a) -> Declares g x a
+  Defines : has g x (Def e) -> Declares g x a
+
+
+-- REDUCTION, CONVERSION, EQUIVALENCE
+
+data Red : Env -> Expr k -> Expr k -> Type where
+  Delta : has g x (Def e) -> Red g (Id x) e
+  Beta  : Red _ (App (Abs _ e) u) (bind_term u e)
+  Pi1   : Red _ (Fst (Pair e1 _ _)) e1
+  Pi2   : Red _ (Snd (Pair _ e1 _)) e2
+  Iota1 : Red _ (If True e1 _) e1
+  Iota2 : Red _ (If False _ e2) e2
+  Zeta  : Red _ (Let u e) (bind_term u e)
+
+data Conv : Env -> Expr k -> Expr k -> Type where
+  Refl      : Conv _ e e
+
+  Trans     : Red g e e' ->
+              Conv g e' e'' ->
+              ----------------
+              Conv g e e''
+
+  CongPi    : Conv g a a' ->
+              Conv (Cons g x (Ass a)) (open_term x b) (open_term x b') ->
+              --------------------------
+              Conv g (Pi a b) (Pi a' b')
+
+  CongAbs   : Conv g a a' ->
+              Conv (Cons g x (Ass a)) (open_term x e) (open_term x e') ->
+              ----------------------------
+              Conv g (Abs a e) (Abs a' e')
+
+  CongApp   : Conv g e1 e1' ->
+              Conv g e2 e2' ->
+              --------------------------------
+              Conv g (App e1 e2) (App e1' e2')
+
+  CongSigma : Conv g a a' ->
+              Conv (Cons g x (Ass a)) (open_term x b) (open_term x b') ->
+              --------------------------------
+              Conv g (Sigma a b) (Sigma a' b')
+
+  CongPair  : Conv g e1 e1' ->
+              Conv g e2 e2' ->
+              Conv g a a' ->
+              ----------------------------------------
+              Conv g (Pair e1 e2 a) (Pair e1' e2' a')
+
+  CongFst   : Conv g e e' ->
+              -----------------------
+              Conv g (Fst e) (Fst e')
+
+  CongSnd   : Conv g e e' ->
+              -----------------------
+              Conv g (Snd e) (Snd e')
+
+  CongIf    : Conv g e1 e1' ->
+              Conv g e2 e2' ->
+              Conv g e3 e3' ->
+              -------------------------------------
+              Conv g (If e1 e2 e3) (If e1' e2' e3')
+
+  CongLet   : Conv g e1 e1' ->
+              Conv (Cons g x (Def e1)) (open_term x e2) (open_term x e2') ->
+              --------------------------------
+              Conv g (Let e1 e2) (Let e1' e2')
+
+data Equiv : Env -> Expr k -> Expr k -> Type where
+  Confl : Conv g e1 e ->
+          Conv g e2 e ->
+          -------------
+          Equiv g e1 e2
+
+  Eta1  : Conv g e1 (Abs a e) ->
+          Conv g e2 e2' ->
+          Equiv (Cons g x (Ass a)) (open_term x e) (App e2' (toVar x)) ->
+          -------------
+          Equiv g e1 e2
+
+  Eta2  : Conv g e1 e1' ->
+          Conv g e2 (Abs a e) ->
+          Equiv (Cons g x (Ass a)) (App e1' (toVar x)) (open_term x e) ->
+          -------------
+          Equiv g e1 e2
