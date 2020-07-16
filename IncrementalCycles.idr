@@ -39,7 +39,6 @@ record Graph a where
   nextMark : Mark
   graph : SortedMap a (Vertex a)
 
-public export
 GState : Type -> Type -> Type
 GState a = State (Graph a)
 
@@ -95,14 +94,14 @@ addEdge k1 k2 = setter k1 (record { outgoing $= (k2 ::) })
 
 
 export
-initGraph : Ord a => GState a ()
-initGraph = put $ mkGraph 0 empty
+initGraph : Ord a => Graph a
+initGraph = mkGraph 0 empty
 
 export
-newVertex : Ord a => a -> GState a ()
-newVertex k = do
+newVertex : Ord a => a -> Graph a -> Graph a
+newVertex k =
   let v = mkVertex k [] [] (-1) 1 k
-  modify $ record { graph $= insert k v }
+  in record { graph $= insert k v }
 
 
 -- CYCLE DETECTION
@@ -248,9 +247,8 @@ computeCycle v w z t = do
   parents <- listOfParents t v []
   listOfParents z w (z :: t :: reverse parents)
 
-export
-addEdgeOrDetectCycle : Eq a => a -> a -> GState a (AddEdgeResult a)
-addEdgeOrDetectCycle v w =
+addEdgeOrDetectCycle' : Eq a => a -> a -> GState a (AddEdgeResult a)
+addEdgeOrDetectCycle' v w =
   if v == w then
     pure $ EdgeCreatesCycle [v] else do
   vlevel <- getLevel v
@@ -281,3 +279,8 @@ addEdgeOrDetectCycle v w =
         addIncoming w v
         pure $ EdgeAdded else do
       pure $ EdgeAdded
+
+export
+addEdgeOrDetectCycle : Eq a => a -> a -> Graph a -> (AddEdgeResult a, Graph a)
+addEdgeOrDetectCycle v w g =
+  runState (addEdgeOrDetectCycle' v w) g
