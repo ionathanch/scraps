@@ -39,7 +39,7 @@ Term Expr where
   kmap _ False           = False
   kmap f (If e1 e2 e3)   = If    (kmap f e1) (kmap f e2) (kmap f e3)
   kmap f (Let e1 e2)     = Let   (kmap f e1) (push (kmap f (assert_smaller e2 (pop e2))))
--- We can give Let expressions type annotations, but we want to keep it as small as possible.
+-- We could give Let expressions type annotations, but we want to keep it as small as possible.
 
 -- Make a variable out of a name.
 toVar : Name -> Expr k

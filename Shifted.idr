@@ -67,7 +67,7 @@ Eq (Var k) where
 -- Needed for push/pop (it should be in a Nat library somewhere...).
 plus_comm_S : (n, m: Nat) -> n + S m = S (n + m)
 plus_comm_S Z _ = Refl
-plus_comm_S (S n) m = rewrite plus_comm_S n m in Refl
+plus_comm_S (S n) m = cong S $ plus_comm_S n m
 
 interface Term (t : Nat -> Type) where
   pop : t (S (n + m)) -> t (n + S m)

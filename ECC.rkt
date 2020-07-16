@@ -229,7 +229,6 @@
           #f
           (first values)))])
 
-
 ;; JUDGEMENTS
 
 (define-judgement-form ECC
