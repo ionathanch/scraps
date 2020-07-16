@@ -89,8 +89,8 @@ setParent k p = setter k (record { parent = p })
 getParent : a -> GState a a
 getParent k = getter k parent
 
-addEdge : a -> a -> GState a ()
-addEdge k1 k2 = setter k1 (record { outgoing $= (k2 ::) })
+insertEdge : a -> a -> GState a ()
+insertEdge k1 k2 = setter k1 (record { outgoing $= (k2 ::) })
 
 
 export
@@ -247,8 +247,8 @@ computeCycle v w z t = do
   parents <- listOfParents t v []
   listOfParents z w (z :: t :: reverse parents)
 
-addEdgeOrDetectCycle' : Eq a => a -> a -> GState a (AddEdgeResult a)
-addEdgeOrDetectCycle' v w =
+addEdgeOrDetectCycle : Eq a => a -> a -> GState a (AddEdgeResult a)
+addEdgeOrDetectCycle v w =
   if v == w then
     pure $ EdgeCreatesCycle [v] else do
   vlevel <- getLevel v
@@ -272,7 +272,7 @@ addEdgeOrDetectCycle' v w =
   where
     succeed : () -> GState a (AddEdgeResult a)
     succeed () = do
-      addEdge v w
+      insertEdge v w
       vlevel <- getLevel v
       wlevel <- getLevel w
       if vlevel == wlevel then do
@@ -281,6 +281,6 @@ addEdgeOrDetectCycle' v w =
       pure $ EdgeAdded
 
 export
-addEdgeOrDetectCycle : Eq a => a -> a -> Graph a -> (AddEdgeResult a, Graph a)
-addEdgeOrDetectCycle v w g =
-  runState (addEdgeOrDetectCycle' v w) g
+addEdge : Eq a => a -> a -> Graph a -> (AddEdgeResult a, Graph a)
+addEdge v w g =
+  runState (addEdgeOrDetectCycle v w) g
