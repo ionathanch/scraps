@@ -29,7 +29,7 @@ congApp = congG Refl
   The converse of congruence is the identity of indiscernibles:
     idind: (forall f. f x = f y) -> x = y
   A related notion is functional extensionality (the converse of congApp):
-    funext: (forall x. f x = g x) -> f = g
+    ext: (forall x. f x = g x) -> f = g
   I don't think these can be proven.
 -}
 
@@ -105,46 +105,67 @@ impl refl = \px => rewrite sym $ refl {P} in px
 contrag : ({P : a -> Type} -> P x = P y) -> x = y
 contrag = LtoML . impl
 
+-- For the next few bits we will need extensionality.
+ext : ({x : a} -> f x = g x) -> f = g
+
 
 -- Example: Proving an isomorphism.
-
--- We will need extensionality.
-ext : ((x : a) -> f x = g x) -> f = g
 
 -- This is essentially a CPS transformation of a
 T : Type -> Type
 T a = forall X. (a -> X) -> X
 
--- R is a relation between sets X and X'
--- k and k' are mappings from A to X and X'
--- t is a T A, which maps a function A -> X to X
--- Parametricity states that if (k a) R (k' a), then (t k) R (t k').
---    A ---- k ---> X        1 --- t k --> X
---    |             |        |             |
---    |             |        |             |
--- If id            R, then  id            R
---    |             |        |             |
---    V             V        V             |
---    A ---- k'---> X'       1 --- t k'--> X'
+||| R is a relation between sets X and X'
+||| k and k' are mappings from A to X and X'
+||| t is a T A, which maps a function A -> X to X
+||| Parametricity for T states that if (k a) R (k' a), then (t k) R (t k').
+|||    A ---- k ---> X        1 --- t k --> X
+|||    |             |        |             |
+|||    |             |        |             |
+||| If id            R, then  id            R
+|||    |             |        |             |
+|||    V             V        V             |
+|||    A ---- k'---> X'       1 --- t k'--> X'
 paramT : forall A, X, X'. (t : T A) -> (R : X -> X' -> Type) -> (k : A -> X) -> (k' : A -> X') ->
   (kR : {a : A} -> R (k a) (k' a)) -> R (t k) (t k')
 
 -- A map from A to T A
-i : forall A. A -> T A
-i a k = k a
+i' : forall A. A -> T A
+i' a k = k a
 
 -- A map from T A to A
-j : forall A. T A -> A
-j t = t id
+j' : forall A. T A -> A
+j' t = t id
 
 -- j is inverse to i
-ji : j (i a) = a
-ji = Refl
+ji' : j' (i' a) = a
+ji' = Refl
 
 -- i is inverse to j when applied to k
-ijExt : forall A, X. {t : T A} -> {k : A -> X} -> i (j t) k = t k
-ijExt = paramT t (\a, x => k a = x) id k Refl
+-- Parametricity: if k a = k a then k (t {A} id) = t {X} k
+ijExt' : forall A, X. {t : T A} -> {k : A -> X} -> i' (j' t) k = t k
+ijExt' = paramT t (\a, x => k a = x) id k Refl
 
 -- i is inverse to j
-ij : forall A. {t : T A} -> i (j t) = t
-ij = ?hole
+ij' : forall A. {t : T A} -> i' (j' t) = t
+ij' = ext ijk
+  where
+    ijk : forall X. {k : A -> X} -> k (t Prelude.id) = t k
+    ijk {k} = ijExt' {t} {k}
+
+
+-- .=. ≃ =: Leibniz equality is isomorphic to M-L equality.
+
+||| P, P' are predicates over A
+||| R a is a relation between P a and P' a, and similarly for R b
+||| Pa is a proof that if P a, then aeqb Pa is a proof of P b, and similarly for P'a
+||| Parametricity for .=. states that if Pa Ra P'a then (aeqb Pa) Rb (aeqb P'a).
+|||   Pa --- P= ---> Pb
+|||   |              |
+|||   |              |
+|||   Ra             Rb
+|||   |              |
+|||   V              V
+|||   P'a -- P'= --> P'b
+paramL : forall A, a, b, P, P'. {aeqb : a .=. b} -> (R : {c : A} -> P c -> P' c -> Type) -> (Pa : P a) -> (P'a : P' a) ->
+  R Pa P'a -> R (aeqb {P = P} Pa) (aeqb {P = P'} P'a)
