@@ -150,7 +150,7 @@ ijExt' = paramT t (\a, x => k a = x) id k Refl
 ij' : forall A. {t : T A} -> i' (j' t) = t
 ij' = ext ijk
   where
-    ijk : forall X. {k : A -> X} -> k (t Prelude.id) = t k
+    ijk : forall X. {k : A -> X} -> k (j' t) = t k
     ijk {k} = ijExt' {t} {k}
 
 
@@ -158,14 +158,39 @@ ij' = ext ijk
 
 ||| P, P' are predicates over A
 ||| R a is a relation between P a and P' a, and similarly for R b
-||| Pa is a proof that if P a, then aeqb Pa is a proof of P b, and similarly for P'a
+||| If Pa is a proof of P a, then aeqb Pa is a proof of P b, and similarly for P'a
 ||| Parametricity for .=. states that if Pa Ra P'a then (aeqb Pa) Rb (aeqb P'a).
-|||   Pa --- P= ---> Pb
-|||   |              |
-|||   |              |
-|||   Ra             Rb
-|||   |              |
-|||   V              V
-|||   P'a -- P'= --> P'b
-paramL : forall A, a, b, P, P'. {aeqb : a .=. b} -> (R : {c : A} -> P c -> P' c -> Type) -> (Pa : P a) -> (P'a : P' a) ->
+|||   Pa --- aeqb ---> Pb
+|||   |                |
+|||   |                |
+|||   Ra               Rb
+|||   |                |
+|||   V                V
+|||   P'a -- aeqb ---> P'b
+paramL : forall A, a, b, P, P'. (aeqb : a .=. b) -> (R : {c : A} -> P c -> P' c -> Type) -> (Pa : P a) -> (P'a : P' a) ->
   R Pa P'a -> R (aeqb {P = P} Pa) (aeqb {P = P'} P'a)
+
+-- MLtoL from above
+i : a = b -> a .=. b
+i Refl pa = pa
+
+-- LtoML from above
+j : a .=. b -> a = b
+j aeqb = aeqb {P = \c => a = c} Refl
+
+-- The type checker complains about implicit variables P
+-- in the following signatures for ji, ijExt, and ij...
+
+-- j is inverse to i
+-- ji : {refl : a = b} -> j (i refl {P}) = refl
+-- ji = Refl
+
+-- i is inverse to j
+-- ijExt : forall P. {aeqb : a .=. b} -> {Pa : P a} -> i (j aeqb) Pa = aeqb Pa
+-- ijExt = paramL aeqb ?R Refl Pa Refl
+
+-- ij : {aeqb : a .=. b} -> i (j aeqb) = aeqb
+-- ij = ext ijk
+--   where
+--     ijk : forall P. {Pa : P a} -> Pa (j aeqb) = aeqb Pa
+--     ijk {Pa} = ijExt' {aeqb} {Pa}
