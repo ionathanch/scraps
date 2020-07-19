@@ -11,6 +11,7 @@ trans' : x = y -> y = z -> x = z
 trans' Refl Refl = Refl
 
 -- Generalized congruence over the functions
+public export
 congG : x = y -> f = g -> f x = g y
 congG Refl Refl = Refl
 
@@ -22,6 +23,7 @@ cong' Refl = Refl
 
 -- This is also the indiscernibility of identicals,
 -- where the property applied is P(f) = f x.
+public export
 congApp : f = g -> f x = g x
 congApp = congG Refl
 
@@ -33,11 +35,13 @@ congApp = congG Refl
   I don't think these can be proven.
 -}
 
+public export
 subst : forall f. x = y -> f x -> f y
 subst Refl fx = fx
 
 -- Like congApp, we can also prove this as
 --    substapp = subst {f = \f => f x}
+public export
 substApp : f = g -> f x -> g x
 substApp Refl fx = fx
 
@@ -102,6 +106,7 @@ LtoML xeqy = xeqy {P = \z => x = z} Refl
 impl : ({P : a -> Type} -> P x = P y) -> x .=. y
 impl refl = \px => rewrite sym $ refl {P} in px
 
+export
 contrag : ({P : a -> Type} -> P x = P y) -> x = y
 contrag = LtoML . impl
 
