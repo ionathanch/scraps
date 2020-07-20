@@ -28,3 +28,4 @@ There are a few other Idris files unrelated to ECC:
 * IncrementalCycles: An implementation of an acyclic directed graph that can incrementally detect cycles as edges are added. This could be used to implement a type synthesis algorithm that can handle floating cumulative universes (i.e. universes not attached to some Type 0 at the bottom).
 * Girard: An "implementation" of Girard's paradox relying on Type: Type. As Idris 2 currently does not have cumulative universes yet, type checking this file will *not* terminate!
 * Interlude: A package containing additional definitions for convenience, mostly stolen from Haskell's `base` package.
+* EqIso: A collection of properties and proofs about equalities and isomorphisms. This may be put into Interlude later.
