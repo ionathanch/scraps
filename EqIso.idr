@@ -1,5 +1,7 @@
 {-
-  Some properties about equalities.
+  Some properties about equalities and isomorphisms.
+  Taken mostly from https://plfa.github.io/Equality/ and https://plfa.github.io/Isomorphism/
+  The isomorphism examples are from "≐≃≡: Leibniz equality is isomorphic to Martin-Löf identity, parametrically": https://doi.org/10.1017/S0956796820000155
 -}
 
 -- Properties of Martin-Löf equality.
@@ -76,7 +78,7 @@ lSym : x .=. y -> y .=. x
 lSym xeqy = xeqy {P = \z => P z -> P x} (lRefl {P})
 
 
--- We prove that Martin-Löf equality and Leibniz equality are... equal?
+-- We prove that Martin-Löf equality and Leibniz equality are functionally equivalent.
 
 MLtoL : x = y -> x .=. y
 MLtoL Refl px = px
@@ -110,11 +112,45 @@ export
 contrag : ({P : a -> Type} -> P x = P y) -> x = y
 contrag = LtoML . impl
 
+
+-- Properties of isomorphisms.
+
+infix 9 =~=
+public export
+record (=~=) A B where
+  constructor mkIso
+  to : A -> B
+  from : B -> A
+  fromTo : forall x. from (to x) = x
+  toFrom : forall y. to (from y) = y
+
+public export
+isoRefl : forall A. A =~= A
+isoRefl = mkIso (\x => x) (\y => y) Refl Refl
+
+public export
+isoSym : forall A, B. A =~= B -> B =~= A
+isoSym ab = mkIso ab.from ab.to ab.toFrom ab.fromTo
+
+public export
+isoTrans : forall A, B, C. A =~= B -> B =~= C -> A =~= C
+isoTrans ab bc = mkIso (\x => bc.to (ab.to x)) (\y => ab.from (bc.from y)) ft ?tf
+  where
+    ft : forall x. ab.from (bc.from (bc.to (ab.to x))) = x
+    ft {x} =
+      rewrite bc.fromTo {x = (ab.to x)} in
+      rewrite ab.fromTo {x} in Refl
+    tf : forall y. bc.to (ab.to (ab.from (bc.from y))) = y
+    tf {y} =
+      rewrite ab.toFrom {y = (bc.from y)} in
+      rewrite bc.toFrom {y} in Refl
+
+
 -- For the next few bits we will need extensionality.
 ext : ({x : a} -> f x = g x) -> f = g
 
 
--- Example: Proving an isomorphism.
+-- Example: A is isomorphic to (forall X. (A -> X) -> X).
 
 -- This is essentially a CPS transformation of a
 T : Type -> Type
@@ -158,8 +194,13 @@ ij' = ext ijk
     ijk : forall X. {k : A -> X} -> k (j' t) = t k
     ijk {k} = ijExt' {t} {k}
 
+-- The isomorphism from A to T A.
+-- TODO: Fix implicit variables.
+isoT : forall A. A =~= T A
+isoT = mkIso i' j' ji' ij'
 
--- .=. ≃ =: Leibniz equality is isomorphic to M-L equality.
+
+-- Example: Leibniz equality is isomorphic to M-L equality.
 
 ||| P, P' are predicates over A
 ||| R a is a relation between P a and P' a, and similarly for R b
@@ -183,7 +224,7 @@ i Refl pa = pa
 j : a .=. b -> a = b
 j aeqb = aeqb {P = \c => a = c} Refl
 
--- The type checker complains about implicit variables P
+-- TODO: The type checker complains about implicit variables P
 -- in the following signatures for ji, ijExt, and ij...
 
 -- j is inverse to i
@@ -199,3 +240,7 @@ j aeqb = aeqb {P = \c => a = c} Refl
 --   where
 --     ijk : forall P. {Pa : P a} -> Pa (j aeqb) = aeqb Pa
 --     ijk {Pa} = ijExt' {aeqb} {Pa}
+
+-- The isomorphism from .=. to =.
+-- isoL : forall a, b. (a = b) =~= (a .=. b)
+-- isoL = mkIso i j ij ji
