@@ -271,13 +271,13 @@ rename_refl : Term t => {a: Name} -> {e: t k} -> rename a a e = e
 rename_trans : Term t => {a, b, c: Name} -> {e: t k} -> rename b c (rename a b e) = rename a c e
 
 -- Theorem: Renaming a variable and then renaming it back should do nothing.
-rename_symm : Term t => {a, b: Name} -> (e: t k) -> rename b a (rename a b e) = e
+rename_symm : Term t => {a, b: Name} -> {e: t k} -> rename b a (rename a b e) = e
 
 -- Theorem: Renaming then substituting should be the same as substituting the original variable.
-subst_rename : Term t => {a, b: Name} -> {u: t Z} -> subst b (rename a b u) = subst a u
+subst_rename : Term t => {a, b: Name} -> {u: t Z} -> {e : t k} -> subst b (rename a b u) e = subst a u e
 
 -- Theorem: Substituting an unused variable should do nothing.
-subst_shift : Term t => {a: Name} -> {u: t Z} -> subst a (shift a u) = Just u
+subst_shift : Term t => {a: Name} -> {u: t Z} -> {e : t k} -> subst a (shift a u) e = e
 
 -- Theorem: Summoning free variable b after renaming from a is the same as summoning free variable a.
 shift_rename : Term t => {a, b: Name} -> {e: t k} -> shift b (rename a b e) = shift a e
