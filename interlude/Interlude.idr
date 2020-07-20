@@ -2,6 +2,8 @@ module Interlude
 
 {-
   A package of common and renamed utilities.
+  From Idris' base package:
+  * Data.Morphisms
   From Haskell's base package:
   * Data.Tuple
   * Data.Ord
@@ -27,6 +29,7 @@ import public Data.Result
 import public Data.Tuple
 import public Data.Ord
 import public Data.Function
+import public Data.Morphisms
 import public Data.Functor
 import public Control.Applicative
 import public Control.Alternative
