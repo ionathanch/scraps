@@ -4,6 +4,8 @@
   The isomorphism examples are from "≐≃≡: Leibniz equality is isomorphic to Martin-Löf identity, parametrically": https://doi.org/10.1017/S0956796820000155
 -}
 
+%default total
+
 -- Properties of Martin-Löf equality.
 -- `sym`, `trans`, and `cong` are already defined in Prelude.
 sym' : x = y -> y = x
