@@ -83,7 +83,24 @@ iffDec : forall A, B. Dec A -> Dec B -> Dec ((A -> B), (B -> A))
 (Yes x)   `iffDec` (No yn't) = No (\(xtoy, _) => yn't (xtoy x))
 
 
-eraseAnd : forall A, B. (x : Dec A) -> (y : Dec B) -> (erase x && erase y) === erase (x `andDec` y)
-eraseOr  : forall A, B. (x : Dec A) -> (y : Dec B) -> (erase x || erase y) === erase (x `orDec`  y)
-eraseNot : forall A. (x : Dec A) -> not (erase x) === erase (notDec x)
-eraseIff : forall A, B. (x : Dec A) -> (y : Dec B) -> (erase x <-> erase y) === erase (x `iffDec` y)
+eraseAnd : forall A, B. (x : Dec A) -> (y : Dec B) -> (erase x && erase y) = erase (x `andDec` y)
+eraseAnd (Yes _) (Yes _) = Refl
+eraseAnd (Yes _) (No  _) = Refl
+eraseAnd (No  _) (Yes _) = Refl
+eraseAnd (No  _) (No  _) = Refl
+
+eraseOr  : forall A, B. (x : Dec A) -> (y : Dec B) -> (erase x || erase y) = erase (x `orDec`  y)
+eraseOr (Yes _) (Yes _) = Refl
+eraseOr (Yes _) (No  _) = Refl
+eraseOr (No  _) (Yes _) = Refl
+eraseOr (No  _) (No  _) = Refl
+
+eraseNot : forall A. (x : Dec A) -> not (erase x) = erase (notDec x)
+eraseNot (Yes _) = Refl
+eraseNot (No  _) = Refl
+
+eraseIff : forall A, B. (x : Dec A) -> (y : Dec B) -> (erase x <-> erase y) = erase (x `iffDec` y)
+eraseIff (Yes _) (Yes _) = Refl
+eraseIff (Yes _) (No  _) = Refl
+eraseIff (No  _) (Yes _) = Refl
+eraseIff (No  _) (No  _) = Refl
