@@ -82,7 +82,7 @@ interface Arrow a => ArrowZero a where
   zeroArrow : a b c
 
 (Alternative m, Monad m) => ArrowZero (Kleislimorphism m) where
-  zeroArrow = empty
+  zeroArrow = Kleisli $ const empty
 
 interface ArrowZero a => ArrowPlus a where
   (<+>) : a b c -> a b c -> a b c

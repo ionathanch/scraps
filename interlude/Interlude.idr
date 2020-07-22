@@ -29,7 +29,6 @@ import public Data.Result
 import public Data.Tuple
 import public Data.Ord
 import public Data.Function
-import public Data.Morphisms
 import public Data.Functor
 import public Control.Applicative
 import public Control.Alternative
