@@ -218,6 +218,11 @@ has (Cons ctx y b) x a =
 
 -- PROPERTIES and LEMMAS
 
+-- Lemma: Unshifting equal indices gets you nothing.
+unshift_equal : (i: Index) -> unshift_index i i = Nothing
+unshift_equal Z = Refl
+unshift_equal (S i) = rewrite unshift_equal i in Refl
+
 -- Theorem: Unshifting a shifted index should do nothing.
 unshift_shift_index : (i, j: Index) -> unshift_index i (shift_index i j) = Just j
 unshift_shift_index Z _ = Refl
@@ -225,28 +230,76 @@ unshift_shift_index (S i) Z = Refl
 unshift_shift_index (S i) (S j) = rewrite unshift_shift_index i j in Refl
 
 indistinct_names : (a, b: Name) -> Type
-indistinct_names a b = a.name = b.name
+indistinct_names a b = a.name == b.name = True
 
 distinct_names : (a, b: Name) -> Type
-distinct_names a b = (a.name = b.name) -> Void
+distinct_names a b = a.name == b.name = False
+
+indistinct_indices : (a, b: Name) -> Type
+indistinct_indices a b = a.index == b.index = True
+
+distinct_indices : (a, b: Name) -> Type
+distinct_indices a b = a.index == b.index = False
+
+-- Lemma: Indistinct names are equal.
+indistinct_names_eq : (a, b: Name) -> indistinct_names a b -> a.name = b.name
+indistinct_names_eq a b indistinct = ?todo_indnaeq
+
+-- Lemma: Indistinct indices are equal.
+indistinct_indices_eq : (a, b: Name) -> indistinct_indices a b -> a.index = b.index
+indistinct_indices_eq a b indistinct = ?todo_indindeq
+
+-- Lemma: A name is made up of its parts.
+name_eta : (a: Name) -> mkName a.name a.index = a
+name_eta (mkName name index) = Refl
 
 -- Lemma: Shifting something with a different name should do nothing.
 shift_distinct_name : {a, b: Name} -> distinct_names a b -> shift_name a b = b
+shift_distinct_name distinct = rewrite distinct in Refl
 
 -- Lemma: Shifting something with the same name shifts the index.
 shift_indistinct_name : {a, b: Name} -> indistinct_names a b -> shift_name a b = mkName b.name (shift_index a.index b.index)
+shift_indistinct_name indistinct = rewrite indistinct in Refl
 
 -- Lemma: Unshifting something with a different name should do nothing.
 unshift_distinct_name : {a, b: Name} -> distinct_names a b -> unshift_name a b = Just b
+unshift_distinct_name distinct = rewrite distinct in Refl
 
 -- Lemma: Unshifting something with the same name shifts the index unless they are the same.
 unshift_indistinct_name : {a, b: Name} -> indistinct_names a b -> unshift_name a b = mkName b.name <$> (unshift_index a.index b.index)
+unshift_indistinct_name indistinct = rewrite indistinct in Refl
+
+-- Lemma: Two names are either distinct or indistinct.
+distinct_indistinct_name : (a, b: Name) -> Either (distinct_names a b) (indistinct_names a b)
+distinct_indistinct_name a b = ?todo_di_name
+
+-- Lemma: Two indices are either distinct or indistinct.
+distinct_indistinct_index : (a, b: Name) -> Either (distinct_indices a b) (indistinct_indices a b)
+distinct_indistinct_index a b = ?todo_di_index
 
 -- Theorem: Unshifting a shifted name should do nothing.
-unshift_shift_name : {a, b: Name} -> unshift_name a (shift_name a b) = Just b
+unshift_shift_name : (a, b: Name) -> unshift_name a (shift_name a b) = Just b
+unshift_shift_name a b =
+  case distinct_indistinct_name a b of
+    Left  l => rewrite l in rewrite l in Refl
+    Right r =>
+      rewrite r in rewrite r in
+      rewrite unshift_shift_index (index a) (index b) in
+      rewrite name_eta b in Refl
 
--- Theorem: Shifting an unshifted name should do nothing. TODO: Maybe this should use a = b instead of a == b?
-shift_unshift_name : {a, b: Name} -> shift_name a <$> unshift_name a b = if a == b then Nothing else Just b 
+-- Theorem: Shifting an unshifted name should do nothing.
+shift_unshift_name : (a, b: Name) -> shift_name a <$> unshift_name a b = if a == b then Nothing else Just b
+shift_unshift_name a b =
+  case distinct_indistinct_name a b of
+    Left  ln => rewrite ln in rewrite ln in Refl
+    Right rn =>
+      rewrite rn in
+      case distinct_indistinct_index a b of
+        Left  li => rewrite li in ?todo_su_rnli
+        Right ri =>
+          rewrite ri in
+          rewrite sym $ indistinct_indices_eq a b ri in
+          rewrite unshift_equal (index a) in Refl
 
 -- Theorem: Opening and closing a name in variables are inverses.
 open_close_var : {a: Name} -> {x: Var k} -> open_var a (close_var a x) = x
