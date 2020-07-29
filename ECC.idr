@@ -58,7 +58,7 @@ Env = Context Decl
 -- So during conversion, there's no type to stick into
 -- the environment, not unless we provide a proof that
 -- the bound term has a certain type.
-data Declares : Env -> Var 0 -> Expr Z -> Type where
+data Declares : Env -> Var Z -> Expr Z -> Type where
   Assumes : has g x (Ass a) -> Declares g x a
   Defines : has g x (Def e) -> Declares g x a
 
@@ -172,7 +172,7 @@ data Subtypes : Env -> Expr k -> Expr k -> Type where
             --------------------------------------
             Subtypes g (Sigma a1 b1) (Sigma a2 b2)
 
-data Types : Env -> Expr k -> Expr k -> Type where
+data Types : Env -> Expr k1 -> Expr k2 -> Type where
   TId : has g x (Ass a) ->
         ----------------
         Types g (Id x) a
