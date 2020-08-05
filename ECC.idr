@@ -10,7 +10,7 @@ data Expr : Nat -> Type where
   Prop    : Expr k                                -- Prop (impredicative)
   Typ     : Nat -> Expr k                         -- Type_i
   Pi      : Expr k -> Expr (S k) -> Expr k        -- Dependent function types: Π(x:A).B
-  Abs     : Expr k -> Expr (S k) -> Expr k        -- Functions: λ(x:A).B
+  Abs     : Expr k -> Expr (S k) -> Expr k        -- Functions: λ(x:A).e
   App     : Expr k -> Expr k -> Expr k            -- Applications: e e
   Sigma   : Expr k -> Expr (S k) -> Expr k        -- Dependent pair types: Σ(x:A).B
   Pair    : Expr k -> Expr k -> Expr k -> Expr k  -- Pairs: ⟨e, e⟩ as T

@@ -2,7 +2,8 @@
   https://prosecco.gforge.inria.fr/personal/hritcu/temp/snforcc.pdf
 -}
 
-import Shifted
+import Data.Fin
+import Data.Vect
 
 %default total
 
@@ -18,40 +19,91 @@ data Rule : Sort -> Sort -> Sort -> Type where
   TKK : Rule Typ  Kind Kind -- types depending on terms
 
 data Expr : Nat -> Type where
-  Id      : Var k -> Expr k                       -- Variables (shifted names)
-  Srt     : Sort -> Expr k                        -- Sorts
-  Pi      : Expr k -> Expr (S k) -> Expr k        -- Dependent function types: Π(x:A).B
-  Abs     : Expr k -> Expr (S k) -> Expr k        -- Functions: λ(x:A).B
-  App     : Expr k -> Expr k -> Expr k            -- Applications: e e
-  Let     : Expr k -> Expr (S k) -> Expr k        -- Definitions: let x = e in e
+  Id      : Fin k -> Expr k                           -- Variables (de Bruijn indices)
+  Srt     : Sort -> Expr k                            -- Sorts
+  Pi      : Expr k -> Expr (S k) -> Expr k            -- Dependent function types: Π(x:A).B
+  Abs     : Expr k -> Expr (S k) -> Expr k            -- Functions: λ(x:A).e
+  App     : Expr k -> Expr k -> Expr k                -- Applications: e e
+  Let     : Expr k -> Expr k -> Expr (S k) -> Expr k  -- Definitions: let x = e in e
 
-
-Term Expr where
-  unit = Id
-  kmap f (Id var)        = f var
-  kmap _ (Srt s)         = Srt s
-  kmap f (Pi a b)        = Pi    (kmap f a)  (push (kmap f (assert_smaller b (pop b))))
-  kmap f (Abs a e)       = Abs   (kmap f a)  (push (kmap f (assert_smaller e (pop e))))
-  kmap f (App e1 e2)     = App   (kmap f e1) (kmap f e2)
-  kmap f (Let e1 e2)     = Let   (kmap f e1) (push (kmap f (assert_smaller e2 (pop e2))))
--- We could give Let expressions type annotations, but we want to keep it as small as possible.
-
--- Make a variable out of a name.
-toVar : Name -> Expr k
-toVar name = Id (Free name)
+eWeaken : Expr k -> Expr (S k)
+eWeaken (Id k)       = Id (weaken k)
+eWeaken (Srt s)      = Srt s
+eWeaken (Pi a b)     = Pi  (eWeaken a) (eWeaken b)
+eWeaken (Abs a e)    = Abs (eWeaken a) (eWeaken e)
+eWeaken (App e e')   = App (eWeaken e) (eWeaken e')
+eWeaken (Let a e e') = Let (eWeaken a) (eWeaken e) (eWeaken e')
 
 
 -- ENVIRONMENTS
 
-data Decl = Ass (Expr Z) | Def (Expr Z)
+data Decl : Nat -> Type where
+  Ass : Expr k -> Decl k
+  Def : Expr k -> Expr k -> Decl k
 
-Env : Type
-Env = Context Decl
+dWeaken : Decl k -> Decl (S k)
+dWeaken (Ass t) = Ass (eWeaken t)
+dWeaken (Def e t) = Def (eWeaken e) (eWeaken t)
 
-data Declares : Env -> Var Z -> Expr Z -> Type where
-  Assumes : has g x (Ass a) -> Declares g x a
-  Defines : has g x (Def e) -> Declares g x a
+Env : Nat -> Type
+Env k = Vect k (Decl k)
 
+infix 5 ::
+(::) : Env k -> Decl k -> Env (S k)
+g :: e = map dWeaken (Vect.(::) e g)
+
+lookup : Fin k -> Env k -> Expr k
+lookup x g = case index x g of
+  Ass   t => t
+  Def _ t => t
+
+
+-- SUBSTITUTION
+
+subst : Env k -> Fin k -> Expr k
+subst g x = case index x g of
+  Def e _ => e
+  Ass   _ => (Id x)
+
+
+-- TYPING
+
+data Types : Env k -> Expr k -> Expr k -> Type where
+  TId   : ---------------------------
+          Types g (Id x) (lookup x g)
+
+  TSort : Axiom s1 s2 ->
+          -------------------------
+          Types g (Srt s1) (Srt s2)
+
+  TPi   : Types g a (Srt s1) ->
+          Types (g :: (Ass a)) b (Srt s2) ->
+          Rule s1 s2 s3 ->
+          -------------------------
+          Types g (Pi a b) (Srt s3)
+
+  TAbs  : Types g a (Srt s) ->
+          Types (g :: (Ass a)) e b ->
+          --------------------------
+          Types g (Abs a e) (Pi a b)
+
+  TApp  : Types g e1 (Pi a b) ->
+          Types g e2 a ->
+          --------------------------------
+          Types g (App e1 e2) (Let a e1 b)
+
+  TLet  : Types g e1 a ->
+          Types (g :: (Def e1 a)) e2 b ->
+          ----------------------------------
+          Types g (Let a e1 e2) (Let a e1 b)
+
+  TConv : Types g e a ->
+          Types g b (Srt s) ->
+          Equiv g a b ->
+          -----------
+          Types g e b
+
+{-
 
 -- REDUCTION, CONVERSION, EQUIVALENCE
 
@@ -144,3 +196,5 @@ data Types : Env -> Expr k1 -> Expr k2 -> Type where
           Equiv g a b ->
           -----------
           Types g e b
+
+-}
