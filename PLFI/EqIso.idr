@@ -136,7 +136,7 @@ isoSym ab = mkIso ab.from ab.to ab.toFrom ab.fromTo
 
 public export
 isoTrans : forall A, B, C. A =~= B -> B =~= C -> A =~= C
-isoTrans ab bc = mkIso (\x => bc.to (ab.to x)) (\y => ab.from (bc.from y)) ft ?tf
+isoTrans ab bc = mkIso (\x => bc.to (ab.to x)) (\y => ab.from (bc.from y)) ft tf
   where
     ft : forall x. ab.from (bc.from (bc.to (ab.to x))) = x
     ft {x} =
