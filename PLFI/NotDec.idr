@@ -87,9 +87,19 @@ toWitness {D = Yes x} () = x
 toWitness {D = No xn't} _ impossible
 
 public export
+toWitnessFalse : forall A. {D : Dec A} -> T (not (erase D)) -> Not A
+toWitnessFalse {D = Yes x} _ impossible
+toWitnessFalse {D = No xn't} () = xn't
+
+public export
 fromWitness : forall A. {D : Dec A} -> A -> T (erase D)
 fromWitness {D = Yes x} _ = ()
 fromWitness {D = No xn't} x = xn't x
+
+public export
+fromWitnessFalse : forall A. {D : Dec A} -> Not A -> T (not (erase D))
+fromWitnessFalse {D = Yes x} xn't = xn't x
+fromWitnessFalse {D = No xn't} x = ()
 
 
 infixr 6 `andDec`

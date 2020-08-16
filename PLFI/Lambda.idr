@@ -225,4 +225,57 @@ data In : Context -> Id -> Typ -> Type where
   That : Not (x = y) -> In ctxt x typ -> In (Cons ctxt y typ') x typ
 
 -- Lookup "smart" constructor for That using proof by reflection
-That' : {xneqy : T (not . erase $ decEq x y)} -> In ctxt x typ -> In (Cons ctxt y typ') x typ
+That' : {x, y : Id} -> {xneqy : T (not (erase (decEq x y)))} -> In ctxt x typ -> In (Cons ctxt y typ') x typ
+That' {x} {y} {xneqy} inCtxt = That (toWitnessFalse xneqy) inCtxt
+
+-- Lookup is injective
+inInjective : In ctxt x a -> In ctxt x b -> a = b
+inInjective This This = Refl
+inInjective This (That xneqy inCtxt) = void (xneqy Refl)
+inInjective (That xneqy inCtxt) This = void (xneqy Refl)
+inInjective (That _ inCtxt1) (That _ inCtxt2) = inInjective inCtxt1 inCtxt2
+
+--------------------------
+---- TYPING JUDGEMENT ----
+--------------------------
+
+data Types : Context -> Term -> Typ -> Type where
+  TVar : In ctxt x a ->
+         --------------------
+         Types ctxt (Var x) a
+
+  TLam : Types (Cons ctxt x a) e b ->
+         ------------------------------
+         Types ctxt (Lam x e) (Fun a b)
+
+  TApp : Types ctxt e1 (Fun a b) ->
+         Types ctxt e2 a ->
+         ------------------------
+         Types ctxt (App e1 e2) b
+
+  TFix : Types (Cons ctxt x a) e a ->
+         ----------------------
+         Types ctxt (Fix x e) a
+
+  TZero : Types ctxt Zero N
+
+  TSucc : Types ctxt n N ->
+          ---------------------
+          Types ctxt (Succ n) N
+
+  TCase : Types ctxt e N ->
+          Types ctxt e1 a ->
+          Types (Cons ctxt x N) e2 a ->
+          -----------------------------
+          Types ctxt (Case e e1 x e2) a
+
+-- Proof that (App Zero (Succ Zero)) is not typeable
+nope1 : Not (Types ctxt (App Zero (Succ Zero)) a)
+nope1 (TApp _ _) impossible
+
+-- Proof that (Lam x (App x x)) is not typeable
+nope2 : Not (Types ctxt (Lam x (App (Var x) (Var x))) a)
+nope2 (TLam (TApp (TVar in1) (TVar in2))) = contradiction (inInjective in1 in2)
+  where
+    contradiction : Not (Fun a b = a)
+    contradiction impossible
