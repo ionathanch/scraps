@@ -16,3 +16,4 @@ A collection of random snippets and scraps of Idris (and sometimes Agda) files.
   The final `Omega` term will not compute since Idris doesn't have a proof-irrelevant `Prop`.
 * Sized.agda: An attempt to index inductive types by depth and make it behave like sized types.
   The final expression cannot be solved; with sized types, this is easily done by setting the size index to ω.
+* PredExt.agda: A straightforward proof that propositional extensionality follows from predicate extensionality.
