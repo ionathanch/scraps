@@ -81,7 +81,7 @@ pathCollUIP pc x y p q =
       g: forall A. {x, y: A} -> (p, q: x === y) -> f p === f q
       g = let (_ ** g) = pc x y in g
       claim0: forall A. {x, y: A} -> (r: x === y) -> r === concat (inv (f Refl)) (f r)
-      claim0 r = J (\x, y, r => r === concat (inv (f Refl)) (f r)) (\x => leftInv (f Refl)) x y r
+      claim0 {x} {y} r = J (\x, y, r => r === concat (inv (f Refl)) (f r)) (\x => leftInv (f Refl)) x y r
       claim1: concat (inv (f Refl)) (f p) === concat (inv (f Refl)) (f q)
       claim1 = ap (\r => concat (inv (f Refl)) r) (g p q)
   in concat (concat (claim0 p) claim1) (inv (claim0 q))
