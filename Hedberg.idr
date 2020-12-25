@@ -5,6 +5,13 @@
   This is proven in Theorem 1 of Section 3 of Generalizations of Hedberg's Theorem [2],
   and also discussed in On h-Propositional Reflection and Hedberg's Theorem [3],
   which links to a proof in Agda [4].
+  A slightly different proof is presented in Theorem 7.2.2 of the HoTT book,
+  relying on a "reflexive mere relation on X implying identity",
+  i.e. (R: X -> X -> Type) ->                        -- relation on X
+       (prop: (x, y: X) -> (r, s: R x y) -> r === s) -- mere propositionality of R
+       (ρ: (x: X) -> R x x) ->                       -- reflexivity of R
+       (f: (x, y: X) -> R x y -> x === y) -> uip X
+
   This file proves the original theorem, that discreteness -> UIP, not the generalization.
 
   [1] https://doi.org/10.1017/S0956796816000174
