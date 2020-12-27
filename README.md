@@ -14,6 +14,7 @@ A collection of random snippets and scraps of Idris (and sometimes Agda) files.
 * PropExt.idr: A reproduction of the proof in [this](https://doi.org/10.23638/LMCS-16(2:14)2020) paper
   that impredicativity with some form of propositional extensionality yields non-normalization.
   The final `Omega` term will not compute since Idris doesn't have a proof-irrelevant `Prop`.
+* Hedberg.idr: A proof of Hedberg's theorem, that types with decidable equality satisfy UIP.
 * Sized.agda: An attempt to index inductive types by depth and make it behave like sized types.
   The final expression cannot be solved; with sized types, this is easily done by setting the size index to ω.
 * PredExt.agda: A straightforward proof that propositional extensionality follows from predicate extensionality.
