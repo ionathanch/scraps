@@ -1,6 +1,6 @@
 # Idris Scraps
 
-A collection of random snippets and scraps of Idris (and sometimes Agda) files.
+A collection of random snippets and scraps of Idris (and sometimes Agda or Coq) files.
 
 * Interlude: A package containing additional definitions for convenience, mostly stolen from Haskell's `base` package.
 * IncrementalCycles.idr: An implementation of an acyclic directed graph that can incrementally detect cycles as edges are added.
@@ -15,6 +15,8 @@ A collection of random snippets and scraps of Idris (and sometimes Agda) files.
   that impredicativity with some form of propositional extensionality yields non-normalization.
   The final `Omega` term will not compute since Idris doesn't have a proof-irrelevant `Prop`.
 * Hedberg.idr: A proof of Hedberg's theorem, that types with decidable equality satisfy UIP.
+* ZeroOne.idr: A quick proof of 0 ≠ 1.
 * Sized.agda: An attempt to index inductive types by depth and make it behave like sized types.
   The final expression cannot be solved; with sized types, this is easily done by setting the size index to ω.
 * PredExt.agda: A straightforward proof that propositional extensionality follows from predicate extensionality.
+* NestedPositivity: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
