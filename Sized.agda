@@ -2,6 +2,7 @@ open import Data.Nat
 open import Data.Nat.Properties
 open import Data.Bool
 open import Function.Base
+open import Data.Product
 
 data SList (A : Set) : (k : ℕ) → Set where
   SNil : (k : ℕ) → SList A k
@@ -33,9 +34,10 @@ append zero _ _ ls = ls
 append k l (SNil _) ls rewrite (+-comm k l) = shiftBy l k ls
 append (suc k) l (SCons k hd tl) ls = SCons (k + l) hd (append k l tl ls)
 
-qsort : (k : ℕ) → SList ℕ k → SList ℕ _
-qsort zero ls = shiftBy zero _ ls
-qsort k (SNil _) = SNil _
+qsort : (k : ℕ) → SList ℕ k → ∃[ k ] (SList ℕ k)
+qsort zero ls = zero , shiftBy zero _ ls
+qsort k (SNil _) = k , SNil _
 qsort (suc k) (SCons k hd tl) =
-  SCons _ hd (append _ _ (qsort k (filter k (leq hd) tl))
-                         (qsort k (filter k (not ∘ leq hd) tl)))
+  let k1 , q1 = qsort k (filter k (leq hd) tl)
+      k2 , q2 = qsort k (filter k (not ∘ leq hd) tl)
+  in  suc (k1 + k2) , SCons (k1 + k2) hd (append k1 k2 q1 q2)
