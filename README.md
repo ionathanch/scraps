@@ -19,6 +19,6 @@ A collection of random snippets and scraps of Idris (and sometimes Agda or Coq) 
 * StrictPositivity.idr: An adaptation of [this](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/) proof
   that non-strictly positive inductive types with an impredicative universe yields `Void`.
 * Sized.agda: An attempt to index inductive types by depth and make it behave like sized types.
-  The final expression cannot be solved; with sized types, this is easily done by setting the size index to ω.
+  Instead of using a limit size ω, we simply say that there exists *some* size.
 * PredExt.agda: A straightforward proof that propositional extensionality follows from predicate extensionality.
 * NestedPositivity.v: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
