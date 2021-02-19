@@ -73,7 +73,7 @@ append' (suc k) l (SCons k hd tl) ls =
 -- Qsort returning a list of some size
 -- The most specific size we could give it would probably be exponential
 qsort : (k : 𝕊) → SList ℕ k → ∃[ k ] (SList ℕ k)
-qsort zero ls = zero , shiftBy zero _ ls
+qsort zero ls = zero , ls
 qsort k (SNil _) = k , SNil _
 qsort (suc k) (SCons k hd tl) =
   let k1 , q1 = qsort k (filter k (_<ᵇ hd) tl)
