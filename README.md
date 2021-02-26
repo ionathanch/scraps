@@ -27,6 +27,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
   Snipe.idr uses pattern-matching on Refl, while SnipeJ.idr avoids this using the J eliminator.
 * Hedberg.idr: A proof of Hedberg's theorem, that types with decidable equality satisfy UIP.
 * ZeroOne.idr: A quick proof of 0 ≠ 1.
+* Ordinals.idr: A construction of some large ordinals following [Ordinals in Type Theory](http://www.cse.chalmers.se/~coquand/ordinal.ps).
 * StrictPositivity.idr: An adaptation of [this](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/) proof
   that non-strictly positive inductive types with an impredicative universe yields `Void`.
 * NestedPositivity.v: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.

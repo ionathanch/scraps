@@ -12,4 +12,3 @@ Definition DnotD (d: D): (D -> False) := matchD D (refl D) d.
 Definition notD (d: D): False := (DnotD d) d.
 Definition isD: D := introD D (refl D) notD.
 Definition bottom: False := notD isD.
-
