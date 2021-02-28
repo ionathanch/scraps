@@ -10,6 +10,8 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
   (i.e. universes not attached to some Type 0 at the bottom).
 * Girard.idr: An "implementation" of Girard's paradox relying on Type: Type.
   As Idris 2 currently does not have cumulative universes yet, type checking this file will *not* terminate!
+* IndInd.idr: A demonstration of Idris' inductive–inductive data definitions with a model
+  of a simple dependently-typed language with an intrinsically well-formed environment.
 
 ## Extensionality Principles
 
