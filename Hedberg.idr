@@ -39,13 +39,13 @@ inv: forall A. {x, y: A} -> x =:= y -> y =:= x
 inv p = J (\x, y, _ => y =:= x) (\x => Refl) x y p
 
 infixr 8 <>
-(<>): forall A. {x, y, z: A} -> x =:= y -> y =:= z -> x =:= z
+(<>): {A: Type} -> {x, y, z: A} -> x =:= y -> y =:= z -> x =:= z
 p <> q = J (\x, y, _ => (z: A) -> y =:= z -> x =:= z) (\_, _, q => q) x y p z q
 
 ap: forall A, B. {x, y: A} -> (f: A -> B) -> (p: x =:= y) -> f x =:= f y
 ap f p = J (\x, y, _ => f x =:= f y) (\_ => Refl) x y p
 
-leftInv: forall A. {x, y: A} -> (p: x =:= y) -> Refl =:= inv p <> p
+leftInv: {A: Type} -> {x, y: A} -> (p: x =:= y) -> Refl =:= inv p <> p
 leftInv p = J (\_, _, p => Refl =:= inv p <> p) (\_ => Refl) x y p
 
 -- Goal: Prove UIP for some type T
@@ -68,7 +68,7 @@ discrete t = (x, y: t) -> Either (x =:= y) (Not (x =:= y))
 -- A path-collapsible type is one with a constant endofunction for its equality type,
 -- i.e. it has an f that maps every proof of equality to each other
 
-const: forall A, B. (A -> B) -> Type
+const: {A, B: Type} -> (A -> B) -> Type
 const f = (x, y: A) -> f x =:= f y
 
 collapsible: Type -> Type
@@ -92,7 +92,7 @@ pathCollUIP pc x y p q =
       f = let (f ** _) = pc x y in f
       g: forall A. {x, y: A} -> (p, q: x =:= y) -> f p =:= f q
       g = let (_ ** g) = pc x y in g
-      claim0: forall A. {x, y: A} -> (r: x =:= y) -> r =:= inv (f Refl) <> f r
+      claim0: {A: Type} -> {x, y: A} -> (r: x =:= y) -> r =:= inv (f Refl) <> f r
       claim0 {x} {y} r = J (\x, y, r => r =:= inv (f Refl) <> f r) (\x => leftInv (f Refl)) x y r
       claim1: inv (f Refl) <> f p =:= inv (f Refl) <> f q
       claim1 = ap (\r => inv (f Refl) <> r) (g p q)
