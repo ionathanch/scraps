@@ -34,6 +34,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * StrictPositivity.idr: An adaptation of [this](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/) proof
   that non-strictly positive inductive types with an impredicative universe yields `Void`.
 * NestedPositivity.v: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
+* SizeLoop.agda: An example showing the necessity of semi-continuous sized types from Abel's [dissertation](http://www.cse.chalmers.se/~abela/diss.pdf).
 
 ## Other
 
