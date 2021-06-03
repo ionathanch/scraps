@@ -1,8 +1,8 @@
 open import Agda.Primitive
-open import Function.Base
-open import Data.Product
-open import Data.Empty
-open import Relation.Binary.PropositionalEquality.Core
+open import Agda.Builtin.Sigma
+open import Function.Base using (_∘_)
+open import Data.Product using (∃-syntax)
+open import Data.Empty using (⊥-elim)
 
 variable
   ℓ : Level
@@ -56,14 +56,14 @@ data W (s : Size {ℓ}) (A : Set ℓ) (B : A → Set ℓ) : Set (lsuc ℓ) where
 
 -- We can raise the size of the Ws returned by f up to the limit of
 -- *all* the sizes of the Ws returned by f
-raise : ∀ {C} → (f : C → ∃[ s ] W s A B) → C → W (⊔ (proj₁ ∘ f)) A B
-raise f c with proj₂ (f c)
-... | sup r r<s a b = sup r (s≤s≤s r<s (s≤⊔f (proj₁ ∘ f) c s≤s)) a b
+raise : ∀ {C} → (f : C → ∃[ s ] W s A B) → C → W (⊔ (fst ∘ f)) A B
+raise f c with snd (f c)
+... | sup r r<s a b = sup r (s≤s≤s r<s (s≤⊔f (fst ∘ f) c s≤s)) a b
 
 -- Transforming the "infinite" W∞ form to a size-paired "sized" W form
 finW : W∞ {ℓ} A B → ∃[ s ] W s A B
 finW (sup∞ a f) =
-  let s = ⊔ (proj₁ ∘ finW ∘ f)
+  let s = ⊔ (fst ∘ finW ∘ f)
   in ↑ s , sup s s≤s a (raise (finW ∘ f))
 
 {- Well-founded induction for Sizes
