@@ -37,8 +37,8 @@ data _≤_ {ℓ} : Size {ℓ} → Size {ℓ} → Set (lsuc ℓ) where
 
 -- Reflexivity of ≤
 s≤s : ∀ {s : Size {ℓ}} → s ≤ s
-s≤s {_} {↑ s} = ↑s≤↑s s≤s
-s≤s {_} {⊔ f} = ⊔f≤s f (λ a → s≤⊔f f a s≤s)
+s≤s {s = ↑ s} = ↑s≤↑s s≤s
+s≤s {s = ⊔ f} = ⊔f≤s f (λ a → s≤⊔f f a s≤s)
 
 -- Strict order
 _<_ : Size {ℓ} → Size {ℓ} → Set (lsuc ℓ)
@@ -81,23 +81,12 @@ record Acc (s : Size {ℓ}) : Set (lsuc ℓ) where
 open Acc
 
 postulate
-  -- The law of excluded middle: this must be an axiom.
-  lem : ∀ (A : Set ℓ) → Dec A
-  -- These two should hold: these are inversion lemmas on ≤.
   ↑s≤↑s⁻¹ : ∀ {r s : Size {ℓ}} → ↑ r ≤ ↑ s → r ≤ s
-  s≤⊔f⁻¹ : ∀ {A : Set ℓ} {s} {f : A → Size} → (a : A) → s ≤ ⊔ f → s ≤ f a
-  -- This asserts that if A is uninhabited, then the existence of a size smaller than ⊔ f is a contradiction.
-  ¬s≤⊔⊥ : ∀ {A : Set ℓ} {s} {f : A → Size} → (A → ⊥) → s ≤ ⊔ f → ⊥
+  ≤-limit : ∀ {A : Set ℓ} {r : Size {ℓ}} {f : A → Size} → r ≤ ⊔ f → ∃[ a ] r ≤ f a
 
 -- A size smaller or equal to an accessible size is still accessible
 ≤-accessible : ∀ {r s : Size {ℓ}} → r ≤ s → Acc s → Acc r
 ≤-accessible r≤s (acc p) = acc (λ t<r → p (s≤s≤s t<r r≤s))
-
--- If a size is bounded by a limit, then it is bounded by some particular size
-≤-limit : ∀ {A : Set ℓ} {r : Size {ℓ}} {f : A → Size} → r ≤ ⊔ f → ∃[ a ] r ≤ f a
-≤-limit {_} {A} r≤⊔f with lem A
-... | yes a = a , s≤⊔f⁻¹ a r≤⊔f
-... | no ¬a = ⊥-elim (¬s≤⊔⊥ ¬a r≤⊔f)
 
 -- All sizes are accessible
 accessible : ∀ (s : Size {ℓ}) → Acc s
