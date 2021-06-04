@@ -67,9 +67,8 @@ finW (sup∞ a f) =
   let s = ⊔ (fst ∘ finW ∘ f)
   in ↑ s , sup s s≤s a (raise (finW ∘ f))
 
-{- Well-founded induction for Sizes via an accessbility predicate based on strict order
-  https://nicolaikraus.github.io/docs/html-ordinals/BrouwerTree.Code.Results.html
-  https://agda.github.io/agda-stdlib/Induction.WellFounded.html
+{- Well-founded induction for Sizes via an
+  accessibility predicate based on strict order
 -}
 
 record Acc (s : Size {ℓ}) : Set (lsuc ℓ) where
@@ -105,3 +104,32 @@ wfind P f s = wfind-acc s (accessible s)
   where
   wfind-acc : ∀ s → Acc s → P s
   wfind-acc s (acc p) = f s (λ r r<s → wfind-acc r (p r<s))
+
+{- Codes???
+  https://arxiv.org/pdf/2104.02549.pdf#subsection.6.2
+  https://nicolaikraus.github.io/docs/html-ordinals/BrouwerTree.Code.html
+-}
+
+Code : Size {ℓ} → Size {ℓ} → Set ℓ
+Code (↑ r) (↑ s) = Code r s
+Code (↑ s) (⊔ f) = ∃[ a ] Code (↑ s) (f a)
+Code (⊔ f) (↑ s) = ∀ a → Code (f a) (↑ s)
+Code (⊔ f) (⊔ g) = ∀ a → ∃[ b ] Code (f a) (g b)
+
+Code-refl : ∀ {s : Size {ℓ}} → Code s s
+Code-refl {s = ↑ s} = Code-refl {s = s}
+Code-refl {s = ⊔ f} = λ a → a , Code-refl {s = f a}
+
+postulate Code-trans : ∀ {r s t : Size {ℓ}} → Code r s → Code s t → Code r t
+
+Code-s≤⊔f : ∀ {A : Set ℓ} → (s : Size {ℓ}) → (f : A → Size {ℓ}) → (a : A) → Code s (f a) → Code s (⊔ f)
+Code-s≤⊔f (↑ s) f a s≤fa = a , s≤fa
+Code-s≤⊔f (⊔ g) f a ⊔g≤fa = λ b → a , Code-trans {r = g b} (Code-s≤⊔f (g b) g b (Code-refl {s = g b})) ⊔g≤fa
+
+toCode : ∀ {r s : Size {ℓ}} → r ≤ s → Code r s
+toCode (↑s≤↑s r≤s) = toCode r≤s
+toCode (s≤s≤s {r} {t} {s} r≤t t≤s) = Code-trans {_} {r} {t} {s} (toCode r≤t) (toCode t≤s)
+toCode {r = ↑ s} (s≤⊔f f a s≤fa) = a , toCode s≤fa
+toCode {r = ⊔ g} (s≤⊔f f a ⊔g≤fa) = λ b → a , Code-trans {r = g b} (Code-s≤⊔f (g b) g b (Code-refl {s = g b})) (toCode ⊔g≤fa)
+toCode {s = ↑ s} (⊔f≤s f h) = λ a → toCode (h a)
+toCode {s = ⊔ g} (⊔f≤s f h) = λ a → {!   !}
