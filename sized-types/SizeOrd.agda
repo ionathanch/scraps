@@ -25,14 +25,14 @@ data Size {ℓ} : Set (lsuc ℓ) where
 data _≤_ {ℓ} : Size {ℓ} → Size {ℓ} → Set (lsuc ℓ) where
   ↑s≤↑s : ∀ {r s} → r ≤ s → ↑ r ≤ ↑ s
   s≤s≤s : ∀ {r s t} → r ≤ s → s ≤ t → r ≤ t
-  s≤⊔f  : ∀ {A} {s} f (a : A) → s ≤ f a → s ≤ ⊔ f
-  ⊔f≤s  : ∀ {A} {s} f → (∀ (a : A) → f a ≤ s) → ⊔ f ≤ s
+  s≤⊔f  : ∀ {s} f (a : A) → s ≤ f a → s ≤ ⊔ f
+  ⊔f≤s  : ∀ {s} f → (∀ (a : A) → f a ≤ s) → ⊔ f ≤ s
 
 -- A possible definition of the smallest size
 ◯ : Size
 ◯ = ⊔ ⊥-elim
 
-◯≤s : ∀ {s : Size} → ◯ ≤ s
+◯≤s : ∀ {s} → ◯ ≤ s
 ◯≤s = ⊔f≤s ⊥-elim λ ()
 
 -- Reflexivity of ≤
@@ -80,12 +80,20 @@ record Acc (s : Size {ℓ}) : Set (lsuc ℓ) where
 open Acc
 
 postulate
+  lem : Dec A
   ↑s≤↑s⁻¹ : ∀ {r s : Size {ℓ}} → ↑ r ≤ ↑ s → r ≤ s
-  ≤-limit : ∀ {A : Set ℓ} {r : Size {ℓ}} {f : A → Size} → r ≤ ⊔ f → ∃[ a ] r ≤ f a
+  s≤⊔f⁻¹ : ∀ {s} {f : A → Size} a → s ≤ ⊔ f → s ≤ f a
+  ¬s<⊔⊥ : ∀ {s} {f : A → Size} → (A → ⊥) → s < ⊔ f → ⊥
 
 -- A size smaller or equal to an accessible size is still accessible
 ≤-accessible : ∀ {r s : Size {ℓ}} → r ≤ s → Acc s → Acc r
 ≤-accessible r≤s (acc p) = acc (λ t<r → p (s≤s≤s t<r r≤s))
+
+-- If a size is strictly bounded by a limit, then it is strctly bounded by some particular size
+≤-limit : ∀ {r} {f : A → Size} → r < ⊔ f → ∃[ a ] r < f a
+≤-limit r<⊔f with lem
+... | yes a = a , s≤⊔f⁻¹ a r<⊔f
+... | no ¬a = ⊥-elim (¬s<⊔⊥ ¬a r<⊔f)
 
 -- All sizes are accessible
 accessible : ∀ (s : Size {ℓ}) → Acc s
@@ -122,7 +130,7 @@ Code-refl {s = ⊔ f} = λ a → a , Code-refl {s = f a}
 
 postulate Code-trans : ∀ {r s t : Size {ℓ}} → Code r s → Code s t → Code r t
 
-Code-s≤⊔f : ∀ {A : Set ℓ} → (s : Size {ℓ}) → (f : A → Size {ℓ}) → (a : A) → Code s (f a) → Code s (⊔ f)
+Code-s≤⊔f : ∀ (s : Size {ℓ}) → (f : A → Size {ℓ}) → (a : A) → Code s (f a) → Code s (⊔ f)
 Code-s≤⊔f (↑ s) f a s≤fa = a , s≤fa
 Code-s≤⊔f (⊔ g) f a ⊔g≤fa = λ b → a , Code-trans {r = g b} (Code-s≤⊔f (g b) g b (Code-refl {s = g b})) ⊔g≤fa
 
