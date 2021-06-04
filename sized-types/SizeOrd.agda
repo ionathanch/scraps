@@ -1,8 +1,9 @@
-open import Agda.Primitive
-open import Agda.Builtin.Sigma
+open import Agda.Primitive using (Level; lsuc)
+open import Agda.Builtin.Sigma using (_,_; fst; snd)
+open import Relation.Nullary using (Dec; yes; no)
 open import Function.Base using (_∘_)
 open import Data.Product using (∃-syntax)
-open import Data.Empty using (⊥-elim)
+open import Data.Empty using (⊥; ⊥-elim)
 
 variable
   ℓ : Level
@@ -66,7 +67,7 @@ finW (sup∞ a f) =
   let s = ⊔ (fst ∘ finW ∘ f)
   in ↑ s , sup s s≤s a (raise (finW ∘ f))
 
-{- Well-founded induction for Sizes
+{- Well-founded induction for Sizes via an accessbility predicate based on strict order
   https://nicolaikraus.github.io/docs/html-ordinals/BrouwerTree.Code.Results.html
   https://agda.github.io/agda-stdlib/Induction.WellFounded.html
 -}
@@ -75,25 +76,43 @@ record Acc (s : Size {ℓ}) : Set (lsuc ℓ) where
   inductive
   constructor acc
   field
-    rs : (∀ {r} → r < s → Acc r)
+    acc< : (∀ {r} → r < s → Acc r)
 
 open Acc
 
-≤-accessible : ∀ {r s : Size {ℓ}} → r ≤ s → Acc s → Acc r
-≤-accessible r≤s (acc f) = acc (λ t<r → f (s≤s≤s t<r r≤s))
-
 postulate
+  -- The law of excluded middle: this must be an axiom.
+  lem : ∀ (A : Set ℓ) → Dec A
+  -- These two should hold: these are inversion lemmas on ≤.
   ↑s≤↑s⁻¹ : ∀ {r s : Size {ℓ}} → ↑ r ≤ ↑ s → r ≤ s
-  s≤⊔f⁻¹ : ∀ {A : Set ℓ} {s : Size {ℓ}} {f : A → Size} → s ≤ ⊔ f → ∃[ a ] s ≤ f a
+  s≤⊔f⁻¹ : ∀ {A : Set ℓ} {s} {f : A → Size} → (a : A) → s ≤ ⊔ f → s ≤ f a
+  -- This asserts that if A is uninhabited, then the existence of a size smaller than ⊔ f is a contradiction.
+  ¬s≤⊔⊥ : ∀ {A : Set ℓ} {s} {f : A → Size} → (A → ⊥) → s ≤ ⊔ f → ⊥
 
+-- A size smaller or equal to an accessible size is still accessible
+≤-accessible : ∀ {r s : Size {ℓ}} → r ≤ s → Acc s → Acc r
+≤-accessible r≤s (acc p) = acc (λ t<r → p (s≤s≤s t<r r≤s))
+
+-- If a size is bounded by a limit, then it is bounded by some particular size
+≤-limit : ∀ {A : Set ℓ} {r : Size {ℓ}} {f : A → Size} → r ≤ ⊔ f → ∃[ a ] r ≤ f a
+≤-limit {_} {A} r≤⊔f with lem A
+... | yes a = a , s≤⊔f⁻¹ a r≤⊔f
+... | no ¬a = ⊥-elim (¬s≤⊔⊥ ¬a r≤⊔f)
+
+-- All sizes are accessible
 accessible : ∀ (s : Size {ℓ}) → Acc s
 accessible (↑ s) = acc (λ ↑r≤↑s → ≤-accessible (↑s≤↑s⁻¹ ↑r≤↑s) (accessible s))
 accessible (⊔ f) = acc accr
   where
   accr : ∀ {r} → r < ⊔ f → Acc r
-  accr r<⊔f with s≤⊔f⁻¹ r<⊔f
-  ... | a , r<fa = rs (accessible (f a)) r<fa
+  accr r<⊔f with ≤-limit r<⊔f
+  ... | a , r<fa = (accessible (f a)).acc< r<fa
 
 -- Well-founded induction:
 -- If P holds on every smaller size, then P holds on this size
-postulate wfind : ∀ (P : Size {ℓ} → Set ℓ) → (∀ s → (∀ r → r < s → P r) → P s) → ∀ s → P s
+-- Recursion occurs structurally on the accessbility of sizes
+wfind : ∀ (P : Size {ℓ} → Set ℓ) → (∀ s → (∀ r → r < s → P r) → P s) → ∀ s → P s
+wfind P f s = wfind-acc s (accessible s)
+  where
+  wfind-acc : ∀ s → Acc s → P s
+  wfind-acc s (acc p) = f s (λ r r<s → wfind-acc r (p r<s))
