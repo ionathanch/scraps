@@ -23,14 +23,6 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * FunExt: An attempt at adding function extensionality as a constructor for the equality type.
   This appears to require an additional parametricity property.
 
-## Sized Types
-* Sizes-*.agda: Sized types with three interpretations of infinite sizes:
-  * Pair: An infinitely-sized natural is pair of *some* size and a natural of that size.
-  * HIT: Infinite sizes are equal to their successors via higher-inductive types.
-  * Conat: Sizes are conaturals, with the infinite size as the infinite conatural.
-* SizeLoop.agda: An example showing the necessity of semi-continuous sized types from Abel's [dissertation](http://www.cse.chalmers.se/~abela/diss.pdf).
-* SizeOrd.agda: An implementation of sizes as generalized Brouwer ordinals, and examples with sized W types.
-
 ## Miscellaneous Proofs
 
 * Snipe: A partial proof of the problem given [here](https://sympa.inria.fr/sympa/arc/coq-club/2020-10/msg00010.html)
