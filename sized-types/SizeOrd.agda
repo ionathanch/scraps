@@ -124,20 +124,33 @@ Code (↑ s) (⊔ f) = ∃[ a ] Code (↑ s) (f a)
 Code (⊔ f) (↑ s) = ∀ a → Code (f a) (↑ s)
 Code (⊔ f) (⊔ g) = ∀ a → ∃[ b ] Code (f a) (g b)
 
-Code-refl : ∀ {s : Size {ℓ}} → Code s s
-Code-refl {s = ↑ s} = Code-refl {s = s}
-Code-refl {s = ⊔ f} = λ a → a , Code-refl {s = f a}
+Code-refl : ∀ (s : Size {ℓ}) → Code s s
+Code-refl (↑ s) = Code-refl s
+Code-refl (⊔ f) = λ a → a , Code-refl (f a)
 
-postulate Code-trans : ∀ {r s t : Size {ℓ}} → Code r s → Code s t → Code r t
+postulate
+  Code-trans : ∀ {r s t : Size {ℓ}} → Code r s → Code s t → Code r t
+  ∃b·fa<fb : (f : A → Size {ℓ}) → (a : A) → ∃[ b ] f a < f b
 
 Code-s≤⊔f : ∀ (s : Size {ℓ}) → (f : A → Size {ℓ}) → (a : A) → Code s (f a) → Code s (⊔ f)
 Code-s≤⊔f (↑ s) f a s≤fa = a , s≤fa
-Code-s≤⊔f (⊔ g) f a ⊔g≤fa = λ b → a , Code-trans {r = g b} (Code-s≤⊔f (g b) g b (Code-refl {s = g b})) ⊔g≤fa
+Code-s≤⊔f (⊔ g) f a ⊔g≤fa = λ b → a , Code-trans {r = g b} (Code-s≤⊔f (g b) g b (Code-refl (g b))) ⊔g≤fa
+
+Code-fa≤⊔f : ∀ (f : A → Size) → (a : A) → Code (f a) (⊔ f)
+Code-fa≤⊔f f a = Code-s≤⊔f (f a) f a (Code-refl (f a))
+
+Code-s≤↑s : ∀ (s : Size {ℓ}) → Code s (↑ s)
+Code-s≤↑s (↑ s) = Code-s≤↑s s
+Code-s≤↑s (⊔ f) = λ a → Code-trans {r = f a} (Code-s≤↑s (f a)) (Code-fa≤⊔f f a)
 
 toCode : ∀ {r s : Size {ℓ}} → r ≤ s → Code r s
 toCode (↑s≤↑s r≤s) = toCode r≤s
-toCode (s≤s≤s {r} {t} {s} r≤t t≤s) = Code-trans {_} {r} {t} {s} (toCode r≤t) (toCode t≤s)
+toCode (s≤s≤s {r} r≤s s≤t) = Code-trans {r = r} (toCode r≤s) (toCode s≤t)
 toCode {r = ↑ s} (s≤⊔f f a s≤fa) = a , toCode s≤fa
-toCode {r = ⊔ g} (s≤⊔f f a ⊔g≤fa) = λ b → a , Code-trans {r = g b} (Code-s≤⊔f (g b) g b (Code-refl {s = g b})) (toCode ⊔g≤fa)
-toCode {s = ↑ s} (⊔f≤s f h) = λ a → toCode (h a)
-toCode {s = ⊔ g} (⊔f≤s f h) = λ a → {!   !}
+toCode {r = ⊔ f} (s≤⊔f g b ⊔f≤gb) a = b , Code-trans {r = f a} (Code-fa≤⊔f f a) (toCode ⊔f≤gb)
+toCode {s = ↑ s} (⊔f≤s f h) a = toCode (h a)
+toCode {s = ⊔ g} (⊔f≤s f h) a =
+  let (b , fa<fb) = ∃b·fa<fb f a
+      ↑fa≤⊔g : Code (↑ f a) (⊔ g)
+      ↑fa≤⊔g = Code-trans {r = ↑ (f a)} {s = f b} (toCode fa<fb) (toCode (h b))
+  in fst ↑fa≤⊔g , Code-trans {r = f a} (Code-s≤↑s (f a)) (snd ↑fa≤⊔g)
