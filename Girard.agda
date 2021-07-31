@@ -1,13 +1,16 @@
 {-# OPTIONS --rewriting #-}
+-- {-# OPTIONS --type-in-type #-}
 
 open import Agda.Primitive
 open import Agda.Builtin.Equality
 open import Agda.Builtin.Equality.Rewrite
 
 {-
-record Lower {ℓ'} ℓ (A : Set (a ⊔ ℓ)) : Set ℓ where
+record Lower {ℓ'} ℓ (A : Set (ℓ' ⊔ ℓ)) : Set ℓ where
   constructor lower
   field raise : A
+
+open Lower
 -}
 
 postulate

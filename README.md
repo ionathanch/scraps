@@ -10,6 +10,9 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
   (i.e. universes not attached to some Type 0 at the bottom).
 * Girard.idr: An "implementation" of Girard's paradox relying on Type: Type.
   As Idris 2 currently does not have cumulative universes yet, type checking this file will *not* terminate!
+* Girard.agda: Another "implementation" of Girard's paradox, but instead of just using the `--type-in-type` flag,
+  it uses an impredicative record with unrestricted elimination implemented using rewrite rules.
+  Type checking with this implementation does terminate, but with the flag set and the actual record does not.
 * IndInd.idr: A demonstration of Idris' inductive–inductive data definitions with a model
   of a simple dependently-typed language with an intrinsically well-formed environment.
 * DeBruijn.idr: The same language in IndInd, but with de Bruijn indices.
