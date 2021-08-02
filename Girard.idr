@@ -3,11 +3,15 @@
   from "A simplification of Girard's paradox": https://doi.org/10.1007/BFb0014058
 -}
 
--- negation ¬x = x → ∀p. p = x → ⊥
-neg : Type -> Type
-neg x = x -> (p: Type) -> p
+-- The uninhabited type
+Empty : Type
+Empty = (p : Type) -> p
 
--- powerset ℘S = S → Type
+-- Negation: ¬x = x → ∀p. p = x → ⊥
+neg : Type -> Type
+neg x = x -> Empty
+
+-- Powerset: ℘S = S → Type
 P : Type -> Type
 P s = s -> Type
 
@@ -28,27 +32,22 @@ sigma s = (s U) (\t: P (P U) => tau t)
 Delta : P U
 Delta y = neg ((p: P U) -> sigma y p -> p (tau (sigma y)))
 
--- A (normal) term of type U
+-- A term of type U
 Omega : U
--- Omega = tau (\p: P U => (x: U) -> sigma x p -> p x)
-{- Omega x f p = (s: U) -> ((sigma s) (\y: U => (p (f ((y x) f))))) -> (p (f ((s x) f))) -}
+Omega = tau (\p: P U => (x: U) -> sigma x p -> p x)
+
+-- From Section 7: Along with terms P and Q, we have the reduction
+-- L R --> (Q M) R --> (P M) R --> L R --> ...
+
+R : (p: P U) -> ((x: U) -> sigma x p -> p x) -> p Omega
+R _ one = one Omega (\x => one (tau (sigma x)))
+
+M : (x: U) -> sigma x Delta -> Delta x
+M _ two three = three Delta two (\p => three (\y => p (tau (sigma y))))
+
+L : neg ((p: P U) -> ((x: U) -> sigma x p -> p x) -> p Omega)
+L zero = zero Delta M (\p => zero (\y => p (tau (sigma y))))
 
 -- A term of type ⊥ = ∀p. p
-void : (p: Type) -> p
-void =
-  (\zero: ((p: P U) -> ((x: U) -> sigma x p -> p x) -> p Omega) =>
-    (zero Delta
-      (\x: U, two: sigma x Delta, three: ((p: P U) -> sigma x p -> p (tau (sigma x))) =>
-        three Delta two
-          (\p: P U =>
-            three
-              (\y: U =>
-                p (tau (sigma y))))))
-    (\p: P U =>
-      zero
-        (\y: U =>
-          p (tau (sigma y)))))
-  (\p: P U, one: ((x: U) -> sigma x p -> p x) =>
-    one Omega
-      (\x: U =>
-        one (tau (sigma x))))
+empty : Empty
+empty = L R
