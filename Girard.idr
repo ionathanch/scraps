@@ -51,3 +51,11 @@ L zero = zero Delta M (\p => zero (\y => p (tau (sigma y))))
 -- A term of type ⊥ = ∀p. p
 empty : Empty
 empty = L R
+
+-- This version with no let bindings loops in Idris
+empty' : Empty
+empty' = ? {-
+  (\zero: ((p: P U) -> ((x: U) -> sigma x p -> p x) -> p Omega) =>
+    (zero Delta (\x, two, three => three Delta two (\p => three (\y => p (tau (sigma y))))))
+    (\p => zero (\y => p (tau (sigma y)))))
+  (\p, one => one Omega (\x => one (tau (sigma x)))) -}
