@@ -37,6 +37,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * StrictPositivity.idr: An adaptation of [this](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/) proof
   that non-strictly positive inductive types with an impredicative universe yields `Void`.
 * NestedPositivity.v: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
+* Sized.agda: Examples of sized types used in [How to Use Sized Types? Let Me Count the Ways](https://ionathan.ch/2021/08/26/using-sized-types.html).
 
 ## Other
 * hm.pl: An incomplete Prolog implementation of Hindley-Milner type inference.
