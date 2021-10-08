@@ -4,7 +4,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 
 ## Extensionality Principles
 
-* PropExt.idr: A reproduction of the proof in [this](https://doi.org/10.23638/LMCS-16(2:14)2020) paper
+* PropExt.idr: A reproduction of the proof in [this paper](https://doi.org/10.23638/LMCS-16(2:14)2020)
   that impredicativity with some form of propositional extensionality yields non-normalization.
   The final `Omega` term will not compute since Idris doesn't have a proof-irrelevant `Prop`.
 * PredExt.agda: A straightforward proof that propositional extensionality follows from predicate extensionality.
@@ -18,7 +18,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * Girard.agda: Another "implementation" of Girard's paradox, but instead of just using the `--type-in-type` flag,
   it uses an impredicative record with unrestricted elimination implemented using rewrite rules.
   Type checking with this implementation does terminate, but with the flag set and the actual record does not.
-* StrictPositivity.idr: An adaptation of [this](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/) proof
+* StrictPositivity.idr: An adaptation of [this proof](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/)
   that non-strictly positive inductive types with an impredicative universe yields `Void`.
 * NestedPositivity.v: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
 
@@ -47,3 +47,6 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * NatProps.idr: Proof of 0 ≠ 1 and injectivity of the successor constructor for naturals.
 * Ordinals.idr: A construction of some large ordinals following [Ordinals in Type Theory](http://www.cse.chalmers.se/~coquand/ordinal.ps).
 * Sized.agda: Examples of sized types used in [How to Use Sized Types? Let Me Count the Ways](https://ionathan.ch/2021/08/26/using-sized-types.html).
+* Acc.agda: An attempt at formalizing the quicksort example from [this Tweet](https://twitter.com/jonmsterling/status/1444640259552251921)
+  originally found in [Modelling General Recursion in Type Theory](http://dx.doi.org/10.1017/S0960129505004822) but failed at Step 3.
+
