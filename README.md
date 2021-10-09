@@ -28,6 +28,8 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
   (and in [this Tweet](https://twitter.com/TaliaRinger/status/1314805118299037696)).
   Snipe.idr uses pattern-matching on Refl, while SnipeJ.idr avoids this using the J eliminator.
 * Hedberg.idr: A proof of Hedberg's theorem, that types with decidable equality satisfy UIP.
+* Hedberg.agda: Two proofs of Hedberg's theorem, one via a reflexive mere relation implying equality
+  and another via a constant endofunction on equalities (path collapsibility).
 * Equality.agda: Implementing propositional equality from scratch using rewrite rules 
   (see [Notes on Propositional Equality](https://ionathan.ch/2021/05/25/notes-on-equality.html)).
 
