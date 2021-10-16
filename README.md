@@ -45,6 +45,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 
 * IndInd.idr: A demonstration of Idris' inductive–inductive data definitions with a model
   of a simple dependently-typed language with an intrinsically well-formed environment.
+* IndRec.agda: Universes à la Tarski with an inductive–recursive encoding.
 * DeBruijn.idr: The same language in IndInd, but with de Bruijn indices.
 * NatProps.idr: Proof of 0 ≠ 1 and injectivity of the successor constructor for naturals.
 * Ordinals.idr: A construction of some large ordinals following [Ordinals in Type Theory](http://www.cse.chalmers.se/~coquand/ordinal.ps).
