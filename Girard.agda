@@ -1,5 +1,14 @@
 {-# OPTIONS --rewriting #-}
--- {-# OPTIONS --type-in-type #-}
+
+{-
+{-# OPTIONS --type-in-type #-}
+
+record Lower (A : Set₁) : Set where
+  constructor lower
+  field raise : A
+
+open Lower
+-}
 
 postulate
   _≡_ : ∀ {A : Set₁} → A → A → Set
@@ -10,13 +19,6 @@ postulate
 
 {-# BUILTIN REWRITE _≡_ #-}
 {-# REWRITE beta #-}
-
-{-
-record Lower (A : Set₁) : Set where
-  constructor lower
-  field raise : A
-open Lower
--}
 
 data ⊥ : Set where
 

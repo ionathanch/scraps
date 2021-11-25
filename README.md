@@ -20,6 +20,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
   Type checking with this implementation does terminate, but with the flag set and the actual record does not.
 * StrictPositivity.idr: An adaptation of [this proof](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/)
   that non-strictly positive inductive types with an impredicative universe yields `Void`.
+* StrictPositivity.agda: Same thing as above but in Agda.
 * NestedPositivity.v: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
 
 ## Propositional Equality
