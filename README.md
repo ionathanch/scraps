@@ -18,6 +18,8 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * Girard.agda: Another "implementation" of Girard's paradox, but instead of just using the `--type-in-type` flag,
   it uses an impredicative record with unrestricted elimination implemented using rewrite rules.
   Type checking with this implementation does terminate, but with the flag set and the actual record does not.
+* Berardi.agda: An adaptation of the inconsistency arising from impredicativity, AoC, and EM from
+  [Proof-irrelevance out of excluded-middle and choice in the calculus of constructions](https://doi.org/10.1017/S0956796800001829).
 * StrictPositivity.idr: An adaptation of [this proof](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/)
   that non-strictly positive inductive types with an impredicative universe yields `Void`.
 * StrictPositivity.agda: Same thing as above but in Agda.
