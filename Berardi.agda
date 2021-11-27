@@ -1,18 +1,20 @@
 {-# OPTIONS --type-in-type #-}
 
-open import Data.Empty using (⊥)
+open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂)
 open import Function.Base using (_∘_; id)
 open import Relation.Nullary using (¬_)
 open import Relation.Binary.PropositionalEquality.Core using (_≡_; refl; subst; sym; cong-app)
 
-record _◁_ (A B : Set) : Set where
+record _◁_ {ℓ} (A B : Set ℓ) : Set ℓ where
+  constructor _,_,_
   field
     ϕ : A → B
     ψ : B → A
     retract : ψ ∘ ϕ ≡ id
+open _◁_
 
-record _◁′_ (A B : Set) : Set where
+record _◁′_ {ℓ} (A B : Set ℓ) : Set ℓ where
   constructor _,_,_
   field
     ϕ : A → B
@@ -20,38 +22,37 @@ record _◁′_ (A B : Set) : Set where
     retract : A ◁ B → ψ ∘ ϕ ≡ id
 open _◁′_
 
--- Applying the axiom of choice on A ◁ B → A ◁ B (proven by identity),
--- which is equivalent to A ◁ B → Σ[ g ∈ A → B ] Σ[ h ∈ B → A ] h ∘ g ≡ id,
--- yields Σ[ g ∈ A → B ] Σ[ h ∈ B → A ] A ◁ B → h ∘ g ≡ id,
--- which is A ◁′ B above.
--- Excluded middle implies that A ≡ ¬ A is a contradiction.
 postulate
-  t : ∀ A B → A ◁′ B
-  EM : ∀ (A : Set) → A ⊎ (¬ A)
+  EM : ∀ {ℓ} (A : Set ℓ) → A ⊎ (¬ A)
 
-A≢¬A : ∀ (A : Set) → A ≡ (¬ A) → ⊥
-A≢¬A A p with EM A
-... | inj₁ a = subst id p a a
-... | inj₂ ¬a = ¬a (subst id (sym p) ¬a)
-
-℘ : Set → Set
+℘ : ∀ {ℓ} → Set ℓ → Set _
 ℘ X = X → Set
 
+t : ∀ {ℓ} (A B : Set ℓ) → ℘ A ◁′ ℘ B
+t A B with EM (℘ A ◁ ℘ B)
+... | inj₁  ℘A◁℘B =
+      let ϕ , ψ , retract = ℘A◁℘B
+      in ϕ , ψ , λ _ → retract
+... | inj₂ ¬℘A◁℘B =
+      (λ _ _ → ⊥) , (λ _ _ → ⊥) , λ ℘A◁℘B → ⊥-elim (¬℘A◁℘B ℘A◁℘B)
+
+-- type-in-type allows U to be put into Set...
 U : Set
 U = ∀ X → ℘ X
 
+-- ...so that u: U can be applied to U itself
 projᵤ : U → ℘ U
 projᵤ u = u U
 
 injᵤ : ℘ U → U
 injᵤ f X =
-  let _ , ψ , _ = t (℘ X) (℘ U)
-      ϕ , _ , _ = t (℘ U) (℘ U)
+  let _ , ψ , _ = t X U
+      ϕ , _ , _ = t U U
   in ψ (ϕ f)
 
 projᵤ∘injᵤ : projᵤ ∘ injᵤ ≡ id
 projᵤ∘injᵤ =
-  retract (t (℘ U) (℘ U)) record { ϕ = id; ψ = id; retract = refl }
+  retract (t U U) record { ϕ = id; ψ = id; retract = refl }
 
 _∈_ : U → U → Set
 u ∈ v = projᵤ u v
@@ -62,5 +63,15 @@ Russell u = ¬ u ∈ u
 r : U
 r = injᵤ Russell
 
+r∈r≡r∉r : r ∈ r ≡ (¬ r ∈ r)
+r∈r≡r∉r = cong-app (cong-app projᵤ∘injᵤ Russell) r
+
+r∉r : ¬ r ∈ r
+r∉r r∈r =
+  let r∈r→r∉r = subst id r∈r≡r∉r
+  in r∈r→r∉r r∈r r∈r  
+
 false : ⊥
-false = A≢¬A (r ∈ r) (cong-app (cong-app projᵤ∘injᵤ Russell) r)
+false =
+  let r∉r→r∈r = subst id (sym r∈r≡r∉r)
+  in r∉r (r∉r→r∈r r∉r)
