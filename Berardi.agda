@@ -1,10 +1,10 @@
 {-# OPTIONS --type-in-type #-}
 
-open import Data.Empty using (⊥; ⊥-elim)
+open import Data.Empty
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂)
 open import Function.Base using (_∘_; id)
 open import Relation.Nullary using (¬_)
-open import Relation.Binary.PropositionalEquality.Core using (_≡_; refl; subst; sym; cong-app)
+open import Relation.Binary.PropositionalEquality.Core using (_≡_; refl; subst; cong; sym)
 
 record _◁_ {ℓ} (A B : Set ℓ) : Set ℓ where
   constructor _,_,_
@@ -51,8 +51,7 @@ injᵤ f X =
   in ψ (ϕ f)
 
 projᵤ∘injᵤ : projᵤ ∘ injᵤ ≡ id
-projᵤ∘injᵤ =
-  retract (t U U) record { ϕ = id; ψ = id; retract = refl }
+projᵤ∘injᵤ = retract (t U U) (id , id , refl)
 
 _∈_ : U → U → Set
 u ∈ v = projᵤ u v
@@ -63,13 +62,16 @@ Russell u = ¬ u ∈ u
 r : U
 r = injᵤ Russell
 
+-- up to here EM + impredicativity is enough,
+-- as long as _≡_ itself is in the impredicative universe,
+-- but to go further, large elimination (via subst) is required
 r∈r≡r∉r : r ∈ r ≡ (¬ r ∈ r)
-r∈r≡r∉r = cong-app (cong-app projᵤ∘injᵤ Russell) r
+r∈r≡r∉r = cong (λ f → f Russell r) projᵤ∘injᵤ
 
 r∉r : ¬ r ∈ r
 r∉r r∈r =
   let r∈r→r∉r = subst id r∈r≡r∉r
-  in r∈r→r∉r r∈r r∈r  
+  in r∈r→r∉r r∈r r∈r
 
 false : ⊥
 false =
