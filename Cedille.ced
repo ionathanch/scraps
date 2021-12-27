@@ -1,0 +1,117 @@
+module cedille.
+
+{- Quant.       Abstract.    Appl.
+   ---------    ---------    -----
+   Π x: 𝒌. 𝒌    λ X: 𝒌. U    T ·U
+   Π x: T. 𝒌    λ x: T. U    T  e
+   ∀ X: 𝒌. U    Λ X: 𝒌. e    t ·U
+   ∀ x: T. U    Λ x: T. e    t -e
+   Π x: T. U    λ x: T. e    t  e -}
+
+-- Declare type with kind
+Unit ◂ ★
+= ∀ X: ★. X ➔ X.
+
+-- Declare term with type
+unit : Unit
+= Λ X. λ x. x.
+
+-- Local definitions
+true : ∀ X: ★. X ➔ X ➔ X
+= Λ X. λ x.
+  -- Erased definition
+  {Y: ★ = X} - λ y: Y. x.
+false : ∀ X: ★. X ➔ X ➔ X
+= Λ X. λ x.
+  -- Non-erased definition
+  -- χ T - t asserts t has type T
+  [id = χ (X ➔ X) - λ y. y] - id.
+
+-- Trivial equality proof
+refl : ∀ X: ★. ∀ x: X. {x ≃ x}
+= Λ X. Λ x. β.
+
+-- Rewriting via an equality
+-- Given a goal type T and an equality p: {e ≃ e'},
+-- ρ p - u will rewrite T containing e to T' containing e'
+-- in place of e, proving T' with u.
+-- The term e of a trivial reflexive proof {e ≃ e}
+-- can be specified using β<e>.
+sym : ∀ X: ★. ∀ x: X. ∀ y: X. {x ≃ y} ➔ {y ≃ x}
+= Λ X. Λ x. Λ y. λ p. ρ p - β<y>.
+
+-- Equality with explicit erasure term
+-- The erasure of an equality proof β{|e|} is e;
+-- this allows the type of d to match the goal type
+-- after rewriting by (sym p) from y to x.
+J : ∀ X: ★. ∀ x: X. ∀ P: (Π y: X. {x ≃ y} ➔ ★).
+   ∀ y: X. ∀ p: {x ≃ y}. Π d: P x β{|p|}. P y p
+= Λ X. Λ x. Λ P. Λ y. Λ p. λ d. ρ (sym -x -y p) - d.
+
+-- Subst via J with automatic motive inference
+-- In the below where the θ term is, the desired type is P x ➔ P y.
+-- We wish to use J to prove this, and J requires a motive P'.
+-- θ<y p> then abstracts the desired type over these variables,
+-- creating the motive (λ y: X. λ p: {x ≃ y}. P x ➔ P y) (p is unused),
+-- then applies the motive to (J ·X -x).
+-- Without θ, this would be written as J ·X -x ·P' -y -p (λ px. px),
+-- which would be a lot more tedious to write with P' explicitly stated,
+-- especially since the abstracted types X and {x ≃ y}
+-- syntactically need to be written out in full.
+subst : ∀ X: ★. ∀ x: X. ∀ y: X. ∀ P: X ➔ ★. ∀ p: {x ≃ y}. P x ➔ P y
+= Λ X. Λ x. Λ y. Λ P. Λ p. θ<y p> (J ·X -x) -y -p (λ px. px).
+
+-- Casting via an equality
+-- Given terms e: T, e', and equality p: {e ≃ e'},
+-- φ p - e {|e'|} erases to e' but has type T.
+Omega : {unit ≃ λ x. x x} ➔ Unit
+= λ p. [omega = φ p - unit {|λ x. x x|}] - omega omega.
+
+-- Ex falso quodlibet
+-- Given an equality p: {e ≃ e'} of Böhm-separable terms,
+-- i.e. terms with distinct closed head-normal forms,
+-- δ - p can be assigned any type (although it erases to λ x. x).
+-- Then φ can be used to construct an X that erases to any term;
+-- in the below example it erases to p, just for fun.
+absurd : {true ≃ false} ➔ ∀ X: ★. X
+= λ p. [void: ∀ X: ★. X = δ - p] -
+Λ X. φ (void ·{void ≃ p}) - (void ·X) {|p|}.
+
+-- Declaring a datatype
+-- Parameters are elided in all recursive references.
+data Acc (X: ★) (R: X ➔ X ➔ ★) : X ➔ ★ =
+| acc : ∀ x: X. (∀ y: X. R y x ➔ Acc y) ➔ Acc x.
+
+-- Case destruction with motive
+-- Given a construction c, σ c @P { | C a… ➔ e } deconstructs c
+-- into a constructor C and arguments a…, producing e
+-- (where a… may be types ·X or implicits -x, but not parameters)
+-- with optional explicit motive P abstracting over indices and target.
+-- Supposing inductive I and P = λ i…. λ x. P', in Coq this would be
+-- case c as x in I _… i… return P' of | C a… ➔ e end.
+accessible : ∀ X: ★. ∀ R: X ➔ X ➔ ★.
+             ∀ x: X. ∀ y: X. R y x ➔ Acc ·X ·R x ➔ Acc ·X ·R y
+= Λ X. Λ R. Λ x. Λ y. λ r. λ accx.
+σ accx @(λ x': X. λ accx': Acc ·X ·R x'. {x' ≃ x} ➔ Acc ·X ·R y) {
+| acc -x accy ➔ λ p. accy -y (ρ p - r)
+} β<x>.
+-- Note that destructing something with an index doesn't unify
+-- the index outside of the destruction and inside of it,
+-- so using the convoy pattern may be necessary.
+
+-- Well-founded induction
+-- If all X are accessible and the predicate P holding for all y R x
+-- means that it holds for x, then P holds for all x.
+-- Given a construction c, μ f. c @P { | C a… ➔ e } is a fixed point
+-- recurring on c, again with optional explicit motive P.
+-- Supposing inductive I, in Coq this would be an applied fixpoint
+-- (fix f (x: I) : P x := case x of | C a… ➔ e end) c
+-- (omitting inductive parameters and indices).
+-- Notably, the type of f abstracts over the indices as well.
+wfind : ∀ X: ★. ∀ R: X ➔ X ➔ ★. (∀ x: X. Acc ·X ·R x) ➔
+        ∀ P: X ➔ ★. (∀ x: X. (∀ y: X. R y x ➔ P y) ➔ P x) ➔
+        ∀ x: X. P x
+= Λ X. Λ R. λ accessible. Λ P. λ ih. Λ x.
+μ wfind. (accessible -x) @(λ x: X. λ accx: Acc ·X ·R x. P x) {
+| acc -x accy ➔ ih -x (Λ y. λ r. wfind -y (accy -y r))
+}.
