@@ -41,25 +41,27 @@ sym : ∀ X: ★. ∀ x: X. ∀ y: X. {x ≃ y} ➔ {y ≃ x}
 = Λ X. Λ x. Λ y. λ p. ρ p - β<y>.
 
 -- Equality with explicit erasure term
--- The erasure of an equality proof β{|e|} is e;
--- this allows the type of d to match the goal type
--- after rewriting by (sym p) from y to x.
+-- The erasure of an equality proof β{|t|} is t;
+-- since the erasure of equalities could be anything,
+-- the induction hypothesis must cover all erasures.
+-- Note the missing type argument of d that was inferred.
 J : ∀ X: ★. ∀ x: X. ∀ P: (Π y: X. {x ≃ y} ➔ ★).
-   ∀ y: X. ∀ p: {x ≃ y}. Π d: P x β{|p|}. P y p
-= Λ X. Λ x. Λ P. Λ y. Λ p. λ d. ρ (sym -x -y p) - d.
+    Π d: ∀ T: ★. ∀ t: T. P x β{|t|}.
+    ∀ y: X. ∀ p: {x ≃ y}. P y p
+= Λ X. Λ x. Λ P. λ d. Λ y. Λ p. ρ (sym -x -y p) - d -p.
 
 -- Subst via J with automatic motive inference
 -- In the below where the θ term is, the desired type is P x ➔ P y.
 -- We wish to use J to prove this, and J requires a motive P'.
 -- θ<y p> then abstracts the desired type over these variables,
 -- creating the motive (λ y: X. λ p: {x ≃ y}. P x ➔ P y) (p is unused),
--- then applies the motive to (J ·X -x).
--- Without θ, this would be written as J ·X -x ·P' -y -p (λ px. px),
+-- then applies the motive to (J -x).
+-- Without θ, this would be written as J -x ·P' (Λ T. Λ t. λ px. px) -y -p,
 -- which would be a lot more tedious to write with P' explicitly stated,
 -- especially since the abstracted types X and {x ≃ y}
 -- syntactically need to be written out in full.
 subst : ∀ X: ★. ∀ x: X. ∀ y: X. ∀ P: X ➔ ★. ∀ p: {x ≃ y}. P x ➔ P y
-= Λ X. Λ x. Λ y. Λ P. Λ p. θ<y p> (J ·X -x) -y -p (λ px. px).
+= Λ X. Λ x. Λ y. Λ P. Λ p. θ<y p> (J -x) (Λ T. Λ t. λ px. px) -y -p.
 
 -- Casting via an equality
 -- Given terms e: T, e', and equality p: {e ≃ e'},
