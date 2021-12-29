@@ -66,8 +66,8 @@ subst : ∀ X: ★. ∀ x: X. ∀ y: X. ∀ P: X ➔ ★. ∀ p: {x ≃ y}. P x 
 -- Casting via an equality
 -- Given terms e: T, e', and equality p: {e ≃ e'},
 -- φ p - e {|e'|} erases to e' but has type T.
-Omega : {unit ≃ λ x. x x} ➔ Unit
-= λ p. [omega = φ p - unit {|λ x. x x|}] - omega omega.
+Omega : {unit ≃ λ x. x x} ➾ Unit
+= Λ p. [omega = φ p - unit {|λ x. x x|}] - omega omega.
 
 -- Ex falso quodlibet
 -- Given an equality p: {e ≃ e'} of Böhm-separable terms,

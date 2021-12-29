@@ -12,17 +12,17 @@ Cast : Π I: ★. (I ➔ ★) ➔ (I ➔ ★) ➔ ★
 = λ I: ★. λ S: I ➔ ★. λ T: I ➔ ★. ι f: ∀ i: I. S i ➔ T i. {f ≃ Λ i. λ x. x}.
 
 introCast : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. ∀ f: ∀ i: I. S i ➔ T i.
-            ∀ p: (∀ i: I. Π x: S i. {f x ≃ x}). Cast ·I ·S ·T
+            (∀ i: I. Π x: S i. {f x ≃ x}) ➾ Cast ·I ·S ·T
 = Λ I. Λ S. Λ T. Λ f. Λ p. [Λ i. λ x. φ (p -i x) - (f -i x) {|x|}, β].
 
-elimCast : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. ∀ c: Cast ·I ·S ·T. ∀ i: I. S i ➔ T i
+elimCast : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. Cast ·I ·S ·T ➾ ∀ i: I. S i ➔ T i
 = Λ I. Λ S. Λ T. Λ c. Λ i. λ x. φ (ρ c.2 - β) - (c.1 -i x) {|x|}.
 
 castRefl : ∀ I: ★. ∀ S: I ➔ ★. Cast ·I ·S ·S
 = Λ I. Λ S. introCast -(Λ i. λ x. x) -(Λ i. λ x. β).
 
 castTrans : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. ∀ U: I ➔ ★.
-            ∀ cst: Cast ·I ·S ·T. ∀ ctu: Cast ·I ·T ·U. Cast ·I ·S ·U
+            Cast ·I ·S ·T ➾ Cast ·I ·T ·U ➾ Cast ·I ·S ·U
 = Λ I. Λ S. Λ T. Λ U. Λ cst. Λ ctu.
 introCast -(Λ i. λ x. elimCast -ctu -i (elimCast -cst -i x))
           -(Λ i. λ x. β).
@@ -41,25 +41,25 @@ TpEq : Π I: ★. (I ➔ ★) ➔ (I ➔ ★) ➔ ★
 = λ I: ★. λ S: I ➔ ★. λ T: I ➔ ★. ι _: Cast ·I ·S ·T. Cast ·I ·T ·S.
 
 introTpEq : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★.
-            ∀ cst: Cast ·I ·S ·T. ∀ cts: Cast ·I ·T ·S. TpEq ·I ·S ·T
+            Cast ·I ·S ·T ➾ Cast ·I ·T ·S ➾ TpEq ·I ·S ·T
 = Λ I. Λ S. Λ T. Λ cst. Λ cts.
 [introCast -(elimCast -cst) -(Λ i. λ x. β),
  introCast -(elimCast -cts) -(Λ i. λ x. β)].
 
-elimTpEqL : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. ∀ tpeq: TpEq ·I ·S ·T. ∀ i: I. S i ➔ T i
+elimTpEqL : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★.TpEq ·I ·S ·T ➾ ∀ i: I. S i ➔ T i
 = Λ I. Λ S. Λ T. Λ tpeq. elimCast -tpeq.1.
 
-elimTpEqR : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. ∀ tpeq: TpEq ·I ·S ·T. ∀ i: I. T i ➔ S i
+elimTpEqR : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. TpEq ·I ·S ·T ➾ ∀ i: I. T i ➔ S i
 = Λ I. Λ S. Λ T. Λ tpeq. elimCast -tpeq.2.
 
 tpEqRefl : ∀ I: ★. ∀ S: I ➔ ★. TpEq ·I ·S ·S
 = Λ I. Λ S. introTpEq -(castRefl ·I ·S) -(castRefl ·I ·S).
 
-tpEqSym : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. ∀ tpeq: TpEq ·I ·S ·T. TpEq ·I ·T ·S
+tpEqSym : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. TpEq ·I ·S ·T ➾ TpEq ·I ·T ·S
 = Λ I. Λ S. Λ T. Λ tpeq. introTpEq -tpeq.2 -tpeq.1.
 
 tpEqTrans : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. ∀ U: I ➔ ★.
-            ∀ tpeqst: TpEq ·I ·S ·T. ∀ tpeqtu: TpEq ·I ·T ·U. TpEq ·I ·S ·U
+            TpEq ·I ·S ·T ➾ TpEq ·I ·T ·U ➾ TpEq ·I ·S ·U
 = Λ I. Λ S. Λ T. Λ U. Λ tpeqst. Λ tpeqtu.
 introTpEq -(castTrans -tpeqst.1 -tpeqtu.1) -(castTrans -tpeqtu.2 -tpeqst.2).
 
