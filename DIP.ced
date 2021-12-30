@@ -1,0 +1,8 @@
+module dip.
+
+data Void: ★ =.
+data Bool: ★ = true: Bool | false: Bool.
+
+dip : ∀ A: ★. ∀ a: A. ∀ b: A. {a ≃ b} ➾
+      ∀ X: ★. (Π p: {a ≃ b}. Π q: {a ≃ b}. ({p ≃ q} ➔ Void) ➔ X) ➔ X
+= Λ A. Λ a. Λ b. Λ p. Λ X. λ f. f (ρ p - β{|true|}) (ρ p - β{|false|}) (λ pq. δ - pq).
