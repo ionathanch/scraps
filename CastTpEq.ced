@@ -1,5 +1,8 @@
 module cast-tpeq.
 
+Unit : ★ = ∀ X: ★. X ➔ X.
+unit : Unit = Λ X. λ x. x.
+
 {- A Cast is an identity function between types, used in the papers
    [1] Efficient Mendler-Style Lambda Encodings in Cedille
    [2] Course-of-Value Induction in Cedille
@@ -32,6 +35,23 @@ elimCastId  : {elimCast  ≃ λ x. x} = β.
 castReflId  : {castRefl  ≃ λ x. x} = β.
 castTransId : {castTrans ≃ λ x. x} = β.
 
+{- Nondependent version of Cast -}
+
+Cast' : ★ ➔ ★ ➔ ★
+= λ S: ★. λ T: ★. Cast ·Unit ·(λ _: Unit. S) ·(λ _: Unit. T).
+
+introCast' : ∀ S: ★. ∀ T: ★. ∀ f: S ➔ T. (Π x: S. {f x ≃ x}) ➾ Cast' ·S ·T
+= Λ S. Λ T. Λ f. Λ p. introCast ·Unit ·(λ _: Unit. S) ·(λ _: Unit. T) -(Λ _: Unit. f) -(Λ _: Unit. p).
+
+elimCast' : ∀ S: ★. ∀ T: ★. Cast' ·S ·T ➾ S ➔ T
+= Λ S. Λ T. Λ c. elimCast ·Unit ·(λ _: Unit. S) ·(λ _: Unit. T) -c -unit.
+
+castRefl' : ∀ S: ★. Cast' ·S ·S
+= Λ S. castRefl ·Unit ·(λ _: Unit. S).
+
+castTrans' : ∀ S: ★. ∀ T: ★. ∀ U: ★. Cast' ·S ·T ➾ Cast' ·T ·U ➾ Cast' ·S ·U
+= Λ S. Λ T. Λ U. Λ cst. Λ ctu. castTrans ·Unit ·(λ _: Unit. S) ·(λ _: Unit. T) ·(λ _: Unit. U) -cst -ctu.
+
 {- A "type equality" is a Cast in both directions,
    satisfying the properties of an equivalence relation,
    but not truly an equality since it has no substitutive principle;
@@ -46,7 +66,7 @@ introTpEq : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★.
 [introCast -(elimCast -cst) -(Λ i. λ x. β),
  introCast -(elimCast -cts) -(Λ i. λ x. β)].
 
-elimTpEqL : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★.TpEq ·I ·S ·T ➾ ∀ i: I. S i ➔ T i
+elimTpEqL : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. TpEq ·I ·S ·T ➾ ∀ i: I. S i ➔ T i
 = Λ I. Λ S. Λ T. Λ tpeq. elimCast -tpeq.1.
 
 elimTpEqR : ∀ I: ★. ∀ S: I ➔ ★. ∀ T: I ➔ ★. TpEq ·I ·S ·T ➾ ∀ i: I. T i ➔ S i
@@ -69,6 +89,29 @@ elimTpEqRId : {elimTpEqR ≃ λ x. x} = β.
 tpEqReflId  : {tpEqRefl  ≃ λ x. x} = β.
 tpEqSymId   : {tpEqSym   ≃ λ x. x} = β.
 tpEqTransId : {tpEqTrans ≃ λ x. x} = β.
+
+{- Nondependent version of TpEq -}
+
+TpEq' : ★ ➔ ★ ➔ ★
+= λ S: ★. λ T: ★. TpEq ·Unit ·(λ _: Unit. S) ·(λ _: Unit. T).
+
+introTpEq' : ∀ S: ★. ∀ T: ★. Cast' ·S ·T ➾ Cast' ·T ·S ➾ TpEq' ·S ·T
+= Λ S. Λ T. Λ cst. Λ cts. introTpEq -cst -cts.
+
+elimTpEqL' : ∀ S: ★. ∀ T: ★. TpEq' ·S ·T ➾ S ➔ T
+= Λ S. Λ T. Λ tpeq. elimTpEqL -tpeq -unit.
+
+elimTpEqR' : ∀ S: ★. ∀ T: ★. TpEq' ·S ·T ➾ T ➔ S
+= Λ S. Λ T. Λ tpeq. elimTpEqR -tpeq -unit.
+
+tpEqRefl' : ∀ S: ★. TpEq' ·S ·S
+= Λ S. tpEqRefl ·Unit ·(λ _: Unit. S).
+
+tpEqSym' : ∀ S: ★. ∀ T: ★. TpEq' ·S ·T ➾ TpEq' ·T ·S
+= Λ S. Λ T. Λ tpeq. tpEqSym -tpeq.
+
+tpEqTrans' : ∀ S: ★. ∀ T: ★. ∀ U: ★. TpEq' ·S ·T ➾ TpEq' ·T ·U ➾ TpEq' ·S ·U
+= Λ S. Λ T. Λ U. Λ tpeqst. Λ tpeqtu. tpEqTrans -tpeqst -tpeqtu.
 
 {- References
    [1] https://arxiv.org/abs/1803.02473
