@@ -1,0 +1,31 @@
+module Utils.
+
+data DPair (A: ★) (B: A ➔ ★) : ★ =
+| dpair : Π a: A. B a ➔ DPair.
+
+Pair : ★ ➔ ★ ➔ ★
+= λ A: ★. λ B: ★. DPair ·A ·(λ _: A. B).
+
+fst : ∀ A: ★. ∀ B: A ➔ ★. DPair ·A ·B ➔ A
+= Λ A. Λ B. λ p. σ p { dpair a b ➔ a }.
+
+snd : ∀ A: ★. ∀ B: A ➔ ★. Π p: DPair ·A ·B. B (fst p)
+= Λ A. Λ B. λ p. σ p { dpair a b ➔ b }.
+
+Id : ★ ➔ ★ ➔ ★
+= λ X: ★. λ Y: ★. ι f: X ➔ Y. {f ≃ λ x. x}.
+
+intrId : ∀ X: ★. ∀ Y: ★. ∀ f: X ➔ Y. (Π x: X. {f x ≃ x}) ➾ Id ·X ·Y
+= Λ X. Λ Y. Λ f. Λ p. [λ x. φ (p x) - (f x) {|x|}, β].
+
+elimId : ∀ X: ★. ∀ Y: ★. Id ·X ·Y ➾ X ➔ Y
+= Λ X. Λ Y. Λ c. λ x. φ (ρ c.2 - β) - (c.1 x) {|x|}.
+
+reflId : ∀ X: ★. Id ·X ·X
+= Λ X. intrId ·X ·X -(λ x. x) -(λ x. β).
+
+transId : ∀ X: ★. ∀ Y: ★. ∀ Z: ★. Id ·X ·Y ➾ Id ·Y ·Z ➾ Id ·X ·Z
+= Λ X. Λ Y. Λ Z. Λ xy. Λ yz. intrId -(λ x. elimId -yz (elimId -xy x)) -(λ x. β).
+
+IdMapping : (★ ➔ ★) ➔ ★
+= λ F: ★ ➔ ★. ∀ X: ★. ∀ Y: ★. Id ·X ·Y ➾ Id ·(F ·X) ·(F ·Y).

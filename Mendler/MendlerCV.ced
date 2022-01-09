@@ -1,0 +1,152 @@
+import Utils.
+import Mendler.
+
+module MendlerCV (F: ★ ➔ ★) {imap: IdMapping ·F}.
+
+{- H-restricted coends -}
+
+Cowedge : (★ ➔ ★) ➔ (★ ➔ ★) ➔ ★ ➔ ★
+= λ H: ★ ➔ ★. λ F: ★ ➔ ★. λ C: ★. ∀ R: ★. H ·R ➾ F ·R ➔ C.
+
+Coend : (★ ➔ ★) ➔ (★ ➔ ★) ➔ ★
+= λ H: ★ ➔ ★. λ F: ★ ➔ ★. ∀ C: ★. Cowedge ·H ·F ·C ➔ C.
+
+intrCoend : ∀ H: ★ ➔ ★. ∀ F: ★ ➔ ★. Cowedge ·H ·F ·(Coend ·H ·F)
+= Λ H. Λ F. Λ R. Λ hr. λ fr. Λ C. λ cowedge. cowedge ·R -hr fr.
+
+elimCoend : ∀ H: ★ ➔ ★. ∀ F: ★ ➔ ★. ∀ C: ★. Cowedge ·H ·F ·C ➔ Coend ·H ·F ➔ C
+= Λ H. Λ F. Λ C. λ cowedge. λ x. x cowedge.
+
+{- Inductive H-restricted coends -}
+
+CoendInductive : Π H: ★ ➔ ★. Π F: ★ ➔ ★. Coend ·H ·F ➔ ★
+= λ H: ★ ➔ ★. λ F: ★ ➔ ★. λ x: Coend ·H ·F.
+∀ Q: Coend ·H ·F ➔ ★. (∀ R: ★. ∀ hr: H ·R. Π fr: F ·R. Q (intrCoend -hr fr)) ➔ Q x.
+
+CoendInd : (★ ➔ ★) ➔ (★ ➔ ★) ➔ ★
+= λ H: ★ ➔ ★. λ F: ★ ➔ ★. ι x: Coend ·H ·F. CoendInductive ·H ·F x.
+
+intrCoendInd : ∀ H: ★ ➔ ★. ∀ F: ★ ➔ ★. Cowedge ·H ·F ·(CoendInd ·H ·F)
+= Λ H. Λ F. Λ R. Λ hr. λ fr. [intrCoend -hr fr, Λ Q. λ q. q ·R -hr fr].
+
+{- Induction on CoendInd via an induction hypothesis on an equal element -}
+
+indCoend' : ∀ H: ★ ➔ ★. ∀ F: ★ ➔ ★. ∀ Q: CoendInd ·H ·F ➔ ★.
+             (∀ R: ★. ∀ hr: H ·R. Π fr: F ·R. Q (intrCoendInd -hr fr)) ➔
+             Π x: CoendInd ·H ·F.
+             ∀ P: ★. (∀ y: CoendInd ·H ·F. {x ≃ y} ➾ Q y ➔ P) ➔ P
+= Λ H. Λ F. Λ Q. λ q. λ x.
+  {Q : Coend ·H ·F ➔ ★
+     = λ x: Coend ·H ·F. ∀ P: ★. (∀ y: CoendInd ·H ·F. {x ≃ y} ➾ Q y ➔ P) ➔ P} -
+x.2 ·Q (Λ R. Λ hr. λ fr. Λ P. λ ih. ih -(intrCoendInd -hr fr) -β (q -hr fr)).
+
+indCoend : ∀ H: ★ ➔ ★. ∀ F: ★ ➔ ★. ∀ Q: CoendInd ·H ·F ➔ ★.
+           (∀ R: ★. ∀ hr: H ·R. Π fr: F ·R. Q (intrCoendInd -hr fr)) ➔
+           Π x: CoendInd ·H ·F. Q x
+= Λ H. Λ F. Λ Q. λ ih. λ x. indCoend' ·H ·F ·Q ih x ·(Q x) (Λ y. Λ p. λ q. ρ p - q).
+
+{- Identity-restricted existentials -}
+
+ExtInd : (★ ➔ ★) ➔ ★ ➔ ★
+= λ F: ★ ➔ ★. λ X: ★. CoendInd ·(λ R: ★. Id ·R ·X) ·F.
+
+intrExtInd : ∀ F: ★ ➔ ★. ∀ X: ★. ∀ R: ★. Id ·R ·X ➾ F ·R ➔ ExtInd ·F ·X
+= Λ F. Λ X. intrCoendInd ·(λ R: ★. Id ·R ·X) ·F.
+
+indExtInd : ∀ F: ★ ➔ ★. ∀ X: ★. Π x: ExtInd ·F ·X. ∀ Q: ExtInd ·F ·X ➔ ★.
+            (∀ R: ★. ∀ id: Id ·R ·X. Π fr: F ·R. Q (intrExtInd ·F ·X ·R -id fr)) ➔ Q x
+= Λ F. Λ X. λ x. Λ Q. λ ih. indCoend ·(λ R: ★. Id ·R ·X) ih x.
+
+imapExt : ∀ F: ★ ➔ ★. IdMapping ·(ExtInd ·F)
+= Λ F. Λ A. Λ B. Λ idAB.
+  {H : ★ ➔ ★ = λ R: ★. Id ·R ·A} -
+  {Q : ExtInd ·F ·A ➔ ★ = λ _: ExtInd ·F ·A. ExtInd ·F ·B} -
+  {ih : ∀ R: ★. ∀ hr: H ·R. Π fr: F ·R. Q (intrCoendInd -hr fr)
+      = Λ R. Λ idRA. λ fr. intrExtInd -(transId -idRA -idAB) fr} -
+  {ihβ : ∀ R: ★. ∀ hr: H ·R. Π fr: F ·R. {indExtInd (ih -hr fr) ih ≃ ih -hr fr}
+       = Λ R. Λ idRA. λ fr. β} -
+intrId -(λ x. φ (θ<x> (indExtInd x) ihβ) -
+                (θ<x> (indExtInd x) ih) {|x|})
+       -(λ x. β).
+
+{- Identity-restricted existential of F and its destructor
+ - This is /not/ a least fixed point of F. idk why
+ -}
+
+Enr' : ★ ➔ ★
+= λ X: ★. Pair ·(F ·X) ·(X ➔ F ·X).
+
+CVF' : ★ ➔ ★ = ExtInd ·Enr'.
+imapCVF' : IdMapping ·CVF' = imapExt ·Enr'.
+FixCV' : ★ = FixInd ·CVF' imapCVF'.
+
+outCV' : FixCV' ➔ F ·FixCV'
+= λ x. indExtInd (outFixInd -imapCVF' x)
+                 ·(λ _: CVF' ·FixCV'. F ·FixCV')
+                 (Λ R. Λ id. λ p. elimId -(imap -id) (fst p)).
+
+{- Same thing, but with additional proof that destructor is equal to outCV'
+ - This /is/ a least fixed point of F. idek anymore
+ -}
+
+Enr : ★ ➔ ★
+= λ X: ★. Pair ·(F ·X) ·(ι f: X ➔ F ·X. {f ≃ outCV'}).
+
+CVF : ★ ➔ ★ = ExtInd ·Enr.
+imapCVF : IdMapping ·CVF = imapExt ·Enr.
+FixCV : ★ = FixInd ·CVF imapCVF.
+
+outCV : FixCV ➔ F ·FixCV
+= λ x. indExtInd (outFixInd -imapCVF x)
+                 ·(λ _: CVF ·FixCV. F ·FixCV)
+                 (Λ R. Λ id. λ p. elimId -(imap -id) (fst p)).
+
+inCV : F ·FixCV ➔ FixCV
+= λ x. inFixInd -imapCVF (intrExtInd -(reflId ·FixCV) (dpair x [outCV, β{|outCV|}])).
+
+{- Induction with course-of-values Q-proof F-algebras -}
+
+PrfAlgCV : (FixCV ➔ ★) ➔ ★
+= λ Q: FixCV ➔ ★. ∀ R: ★. ∀ c: Id ·R ·FixCV.
+Π out: R ➔ F ·R. {out ≃ outCV} ➾
+(Π r: R. Q (elimId -c r)) ➔
+Π fr: F ·R. Q (inCV (elimId -(imap -c) fr)).
+
+inductionCV : ∀ Q: FixCV ➔ ★. PrfAlgCV ·Q ➔ Π x: FixCV. Q x
+= Λ Q. λ prf. λ x.
+  [ih : PrfAlg ·CVF imapCVF ·FixCV ·Q (inFixInd ·CVF -imapCVF)
+      -- motive = λ cvfr: CVR ·R. Q (inFixInd -imapCVF (elimId -(imap -c) cvfr))
+      = Λ R. Λ c. λ ih. λ cvfr. θ<cvfr> (indExtInd ·Enr ·R cvfr)
+        (Λ R'. Λ rr. λ enr: Enr ·R'.
+           {P : Enr ·R' ➔ ★ -- P = λ enr. motive (intrExtInd -rr enr)
+              = λ enr: Enr ·R'. Q (inFixInd -imapCVF (elimId -(imapCVF -c) (intrExtInd -rr enr)))} -
+           σ enr @P {
+           | dpair fr out ➔ ρ out.2 -
+             prf ·R' -(transId -rr -c) out.1 -out.2 (λ r'. ih (elimId -rr r')) fr
+           })] -
+induction ·CVF -imapCVF ·Q ih x.
+
+-- Reordering arguments for convenience with θ<x>
+inductionCV' : Π x: FixCV. ∀ Q: FixCV ➔ ★. PrfAlgCV ·Q ➔ Q x
+= λ x. Λ Q. λ prf. inductionCV ·Q prf x.
+
+indCVHom : ∀ Q: FixCV ➔ ★. ∀ prf: PrfAlgCV ·Q. ∀ x: F ·FixCV.
+           {inductionCV prf (inCV x) ≃ prf outCV (inductionCV prf) x}
+= Λ Q. Λ prf. Λ x. β.
+
+lambekCV-β : ∀ x: F ·FixCV. {outCV (inCV x) ≃ x}
+= Λ x. β.
+
+lambekCV-η : Π x: FixCV. {inCV (outCV x) ≃ x}
+= λ x. θ<x> (inductionCV' x) (Λ R: ★. Λ c. λ out. Λ p. λ ih. λ fr. β).
+
+{- Course-of-values recursion -}
+
+AlgCV : ★ ➔ ★
+= λ X: ★. ∀ R: ★. (R ➔ F ·R) ➔ (R ➔ X) ➔ F ·R ➔ X.
+
+foldCV : ∀ X: ★. AlgCV ·X ➔ FixCV ➔ X
+= Λ X. λ alg. λ fix. θ<fix> (inductionCV' fix) (Λ R. Λ c. λ out. Λ p. λ ih. λ fr. alg ·R out ih fr).
+
+foldCVHom : ∀ X: ★. ∀ x: F ·FixCV. ∀ alg: AlgCV ·X. {foldCV alg (inCV x) ≃ alg outCV (foldCV alg) x}
+= Λ X. Λ x. Λ alg. β.

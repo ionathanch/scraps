@@ -1,0 +1,80 @@
+import Utils.
+
+module Mendler (F: ★ ➔ ★) {imap: IdMapping ·F}.
+
+{- Mender F-algebras -}
+
+Alg : ★ ➔ ★
+= λ X: ★. ∀ R: ★. (R ➔ X) ➔ F ·R ➔ X.
+
+Fix : ★
+= ∀ X: ★. Alg ·X ➔ X.
+
+fold : ∀ X: ★. Alg ·X ➔ Fix ➔ X
+= Λ X. λ alg. λ fix. fix ·X alg.
+
+inFix : F ·Fix ➔ Fix
+= λ x. Λ X. λ alg. alg ·Fix (fold ·X alg) x.
+
+-- outFix : Fix ➔ F ·Fix = ●.
+
+{- Mender Q-proof F-algebras -}
+
+PrfAlg : Π X: ★. (X ➔ ★) ➔ (F ·X ➔ X) ➔ ★
+= λ X: ★. λ Q: X ➔ ★. λ alg: F ·X ➔ X.
+∀ R: ★. ∀ c: Id ·R ·X.
+(Π r: R. Q (elimId -c r)) ➔
+Π fr: F ·R. Q (alg (elimId -(imap -c) fr)).
+
+IsIndFix : Fix ➔ ★
+= λ x: Fix. ∀ Q: Fix ➔ ★. PrfAlg ·Fix ·Q inFix ➔ Q x.
+
+FixInd : ★
+= ι x: Fix. IsIndFix x.
+
+inFixInd : F ·FixInd ➔ FixInd
+= {id : Id ·FixInd ·Fix = intrId -(λ x. x.1) -(λ x. β<x>)} -
+  {c : Id ·(F ·FixInd) ·(F ·Fix) = imap -id} -
+  [tc1 : F ·FixInd ➔ Fix = λ x. inFix (elimId -c x)] -
+  {tc2 : Π x: F ·FixInd. IsIndFix (tc1 x)
+       = λ x. Λ Q. λ prf. prf ·FixInd -id (λ r. r.2 prf) x} -
+λ x. [tc1 x, tc2 x].
+
+{- Induction on FixInd via lifting induction on Fix -}
+
+LiftFix : (FixInd ➔ ★) ➔ Fix ➔ ★
+= λ Q: FixInd ➔ ★. λ x: Fix. DPair ·FixInd ·(λ y: FixInd. ι _: Q y. {x ≃ y}).
+
+liftFix : ∀ Q: FixInd ➔ ★. Π x: FixInd. Q x ➔ LiftFix ·Q x.1
+= Λ Q. λ x. λ q. dpair x [q, β{|q|}].
+
+unliftFix : ∀ Q: FixInd ➔ ★. ∀ x: FixInd. LiftFix ·Q x.1 ➔ Q x
+= Λ Q. Λ x. λ qlift. [q = snd qlift] - ρ q.2 - q.1.
+
+convFixIH : ∀ Q: FixInd ➔ ★. PrfAlg ·FixInd ·Q inFixInd ➔ PrfAlg ·Fix ·(LiftFix ·Q) inFix
+= Λ Q. λ prf. Λ R. Λ c. λ ih. λ fr.
+  [id : Id ·R ·FixInd
+      = intrId -(λ r. fst (ih r)) -(λ r. ρ ς (snd (ih r)).2 - β)] -
+  liftFix (inFixInd (elimId -(imap -id) fr))
+          (prf -id (λ r. unliftFix -(elimId -id r) (ih r)) fr).
+
+induction : ∀ Q: FixInd ➔ ★. PrfAlg ·FixInd ·Q inFixInd ➔ Π x: FixInd. Q x
+= Λ Q. λ prf. λ x. unliftFix -x (x.2 (convFixIH prf)).
+
+{- Destructors, computation (β), and uniqueness (η) -}
+
+foldHom : ∀ X: ★. ∀ x: F ·Fix. ∀ alg: Alg ·X. {fold alg (inFix x) ≃ alg (fold alg) x}
+= Λ X. Λ x. Λ alg. β.
+
+indHom : ∀ Q: FixInd ➔ ★. ∀ prf: PrfAlg ·FixInd ·Q inFixInd. ∀ x: F ·FixInd.
+         ∀ c: Id ·FixInd ·FixInd. {induction prf (inFixInd x) ≃ prf -c (induction prf) x}
+= Λ Q. Λ prf. Λ x. Λ c. β.
+
+outFixInd : FixInd ➔ F ·FixInd
+= induction ·(λ _: FixInd. F ·FixInd) (Λ R. Λ c. λ ih. λ fr. elimId -(imap -c) fr).
+
+lambek-β : ∀ x: F ·FixInd. {outFixInd (inFixInd x) ≃ x}
+= Λ x. β.
+
+lambek-η : Π x: FixInd. {inFixInd (outFixInd x) ≃ x}
+= λ x. θ<x> induction (Λ R: ★. Λ c. λ ih. λ fr. β) x.
