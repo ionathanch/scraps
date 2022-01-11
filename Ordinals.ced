@@ -1,0 +1,38 @@
+module Ordinals.
+
+-- Inductively Defined Types in the Calculus of Constructions (Pfenning and Paulin-Mohring)
+-- https://doi.org/10.1007/BFb0040259
+-- Originally by Coquand and Huet
+data Ord: ★ =
+| ozero: Ord
+| osucc : Ord ➔ Ord
+| olim : ∀ A: ★. (A ➔ Ord) ➔ Ord.
+
+-- Connecting Constructive Notions of Ordinals in Homotopy Type Theory (Kraus, Forsberg, Xu)
+-- https://doi.org/10.4230/LIPIcs.MFCS.2021.70
+-- Originally by Brouwer, presumably
+data Leq: Ord ➔ Ord ➔ ★ =
+| leq-zero: ∀ x: Ord. Leq ozero x
+| leq-mono: ∀ x: Ord. ∀ y: Ord. Leq x y ➔ Leq (osucc x) (osucc y)
+| leq-cocone: ∀ A: ★. ∀ x: Ord. ∀ f: A ➔ Ord. (Π a: A. Leq (f a) x) ➔ Leq (olim f) x
+| leq-limiting : ∀ A: ★. ∀ x: Ord. ∀ f: A ➔ Ord. Π a: A. Leq x (f a) ➔ Leq x (olim f).
+
+-- Leq is reflexive (∀ x, x ≤ x)
+reflLeq : Π x: Ord. Leq x x
+= λ x. μ reflLeq. x {
+| ozero ➔ leq-zero -ozero
+| osucc x ➔ [x' = to/Ord -isType/reflLeq x] -
+  leq-mono -x' -x' (reflLeq x)
+| olim ·A f ➔ [f' = λ a: A. to/Ord -isType/reflLeq (f a)] -
+  leq-cocone -(olim f') -f' (λ a. leq-limiting -(f' a) -f' a (reflLeq (f a)))
+}.
+
+-- Strict order (x < y ≝ x+1 ≤ y)
+Lt : Ord ➔ Ord ➔ ★ =
+λ x: Ord. λ y: Ord. Leq (osucc x) y.
+
+oinf : Ord = olim ·Ord (λ o. o).
+
+-- oinf < oinf
+oinf-oinf : Lt oinf oinf
+= leq-limiting ·Ord -(osucc oinf) -(λ o. o) (osucc oinf) (reflLeq (osucc oinf)).
