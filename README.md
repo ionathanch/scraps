@@ -54,6 +54,8 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * DeBruijn.idr: The same language in IndInd, but with de Bruijn indices.
 * NatProps.idr: Proof of 0 ≠ 1 and injectivity of the successor constructor for naturals.
 * Ordinals.idr: A construction of some large ordinals following [Ordinals in Type Theory](http://www.cse.chalmers.se/~coquand/ordinal.ps).
+* Ordinals.ced: The generalization of ordinal trees in an impredicative setting is not well-founded.
+* Ordinals.agda: As above, but with an explicit proof of falsehood.
 * Sized.agda: Examples of sized types used in [How to Use Sized Types? Let Me Count the Ways](https://ionathan.ch/2021/08/26/using-sized-types.html).
 * Acc.agda: An attempt at formalizing the quicksort example from [this Tweet](https://twitter.com/jonmsterling/status/1444640259552251921)
   originally found in [Modelling General Recursion in Type Theory](http://dx.doi.org/10.1017/S0960129505004822) but failed at Step 3.
