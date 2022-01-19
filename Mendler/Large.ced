@@ -63,3 +63,12 @@ foldIn : ∀ R: ★. ∀ id: Id ·R ·FixInd. (Π r: R. FoldR (elimId -id r) ·(
 foldRExists : Π x: FixInd. FoldR x ·(Fold x)
 = induction ·(λ x: FixInd. FoldR x ·(Fold x))
   Λ R. Λ id. λ ih. λ x. foldIn ·R -id ih -x.
+
+foldC : ∀ x: F ·FixInd. Eq ·(Fold (inFixInd x)) ·(A ·FixInd (reflId ·FixInd) ·Fold x)
+= Λ x. irrelEq -(foldInEq ·FixInd -(reflId ·FixInd) foldRExists -x).
+
+rollFold : ∀ x: F ·FixInd. A ·FixInd (reflId ·FixInd) ·Fold x ➔ Fold (inFixInd x)
+= Λ x. λ a. elimEqR -(foldC -x) a.
+
+unrollRold : ∀ x: F ·FixInd. Fold (inFixInd x) ➔ A ·FixInd (reflId ·FixInd) ·Fold x
+= Λ x. λ f. elimEqL -(foldC -x) f.

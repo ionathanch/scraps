@@ -27,6 +27,9 @@ reflId : ∀ X: ★. Id ·X ·X
 transId : ∀ X: ★. ∀ Y: ★. ∀ Z: ★. Id ·X ·Y ➾ Id ·Y ·Z ➾ Id ·X ·Z
 = Λ X. Λ Y. Λ Z. Λ xy. Λ yz. intrId -(λ x. elimId -yz (elimId -xy x)) -(λ x. β).
 
+irrelId : ∀ X: ★. ∀ Y: ★. Id ·X ·Y ➾ Id ·X ·Y
+= Λ X. Λ Y. Λ id. intrId -(elimId -id) -(λ x. β).
+
 Mono : (★ ➔ ★) ➔ ★
 = λ F: ★ ➔ ★. ∀ X: ★. ∀ Y: ★. Id ·X ·Y ➾ Id ·(F ·X) ·(F ·Y).
 
@@ -52,3 +55,7 @@ symEq : ∀ X: ★. ∀ Y: ★. Eq ·X ·Y ➾ Eq ·Y ·X
 
 transEq : ∀ X: ★. ∀ Y: ★. ∀ Z: ★. Eq ·X ·Y ➾ Eq ·Y ·Z ➾ Eq ·X ·Z
 = Λ X. Λ Y. Λ Z. Λ xy. Λ yz. intrEq -(transId -xy.1 -yz.1) -(transId -yz.2 -xy.2).
+
+irrelEq : ∀ X: ★. ∀ Y: ★. Eq ·X ·Y ➾ Eq ·X ·Y
+= Λ X. Λ Y. Λ eq. intrEq -(intrId -(elimEqL -eq) -(λ x. β))
+                         -(intrId -(elimEqR -eq) -(λ y. β)).
