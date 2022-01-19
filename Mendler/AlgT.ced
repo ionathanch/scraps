@@ -1,0 +1,13 @@
+import Utils.
+module AlgT (F: ★ ➔ ★) (imap: Mono ·F).
+import Mendler ·F -imap.
+
+𝒌AlgT = Π R: ★. Id ·R ·FixInd ➔ (R ➔ ★) ➔ F ·R ➔ ★.
+
+AlgTResp : 𝒌AlgT ➔ ★
+= λ A: 𝒌AlgT. ∀ R1: ★. ∀ R2: ★.
+∀ id1: Id ·R1 ·FixInd. ∀ id2: Id ·R2 ·FixInd.
+∀ Ih1: R1 ➔ ★. ∀ Ih2: R2 ➔ ★.
+(Π r1: R1. Π r2: R2. {r1 ≃ r2} ➔ Eq ·(Ih1 r1) ·(Ih2 r2)) ➔
+Π x1: F ·R1. Π x2: F ·R2. {x1 ≃ x2} ➔
+Eq ·(A ·R1 id1 ·Ih1 x1) ·(A ·R2 id2 ·Ih2 x2).

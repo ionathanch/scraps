@@ -1,0 +1,65 @@
+import Utils.
+import AlgT.
+module Large (F: ★ ➔ ★) {imap: Mono ·F} (A: 𝒌AlgT ·F imap) (AC: AlgTResp ·F imap ·A).
+import Mendler ·F -imap.
+
+data FoldR : FixInd ➔ ★ ➔ ★ =
+| foldRIn : ∀ R: ★. ∀ id: Id ·R ·FixInd. ∀ x: F ·R. ∀ Ih: R ➔ ★.
+            (Π r: R. FoldR (elimId -id r) ·(Ih r)) ➔
+            ∀ X: ★. Eq ·X ·(A ·R id ·Ih x) ➾
+            FoldR (inFixInd (elimId -(imap -id) x)) ·X.
+
+Fold : FixInd ➔ ★
+= λ x: FixInd. ∀ X: ★. FoldR x ·X ➾ X.
+
+foldRResp : ∀ x: FixInd. ∀ T1: ★. FoldR x ·T1 ➔ ∀ T2: ★. Eq ·T1 ·T2 ➾ FoldR x ·T2
+= Λ x. Λ T1. λ foldR1. σ foldR1 {
+| foldRIn ·R -id -fr ·Ih rec ·T1 -eqT1 ➔ Λ T2. Λ eq.
+  foldRIn ·R -id -fr ·Ih rec ·T2 -(transEq -(symEq -eq) -eqT1)
+}.
+
+-- TODO: For some reason this doesn't type check when fr1 and fr2 are named x1 and x2 instead...
+foldRUnique : ∀ x: FixInd. ∀ T1: ★. FoldR x ·T1 ➔ ∀ T2: ★. FoldR x ·T2 ➔ Eq ·T1 ·T2
+= Λ x. Λ T1. λ foldR1.
+  μ foldRUnique. foldR1 {
+  | foldRIn ·R1 -id1 -fr1 ·Ih1 rec1 ·T1 -eqT1 ➔ Λ T2. λ foldR2.
+    {fix1 = inFixInd (elimId -(imap -id1) fr1)} -
+  σ foldR2 @(λ x': FixInd. λ T2: ★. λ _: FoldR x' ·T2. {fix1 ≃ x'} ➾ Eq ·T1 ·T2) {
+  | foldRIn ·R2 -id2 -fr2 ·Ih2 rec2 ·T2 -eqT2 ➔ Λ p.
+    {fix2 = inFixInd (elimId -(imap -id2) fr2)} -
+    {q : {fr1 ≃ fr2} = ρ p @fix.{outFixInd fix ≃ outFixInd fix2} - β} -
+    {ih : Π r1: R1. Π r2: R2. {r1 ≃ r2} ➔ Eq ·(Ih1 r1) ·(Ih2 r2)
+        = λ r1. λ r2. λ p. foldRUnique -(elimId -id1 r1) (rec1 r1) (ρ p - rec2 r2)} -
+    {eqA : Eq ·(A ·R1 id1 ·Ih1 fr1) ·(A ·R2 id2 ·Ih2 fr2)
+         = AC -id1 -id2 ih fr1 fr2 q} -
+    transEq -eqT1 -(transEq -eqA -(symEq -eqT2))
+  } -β }.
+
+foldRIn' : ∀ R: ★. ∀ id: Id ·R ·FixInd. ∀ Ih: R ➔ ★.
+           (Π r: R. FoldR (elimId -id r) ·(Ih r)) ➔
+           ∀ x: F ·R. FoldR (inFixInd (elimId -(imap -id) x)) ·(A ·R id ·Ih x)
+= Λ R. Λ id. Λ Ih. λ ih. Λ x. foldRIn ·R -id -x ·Ih ih -(reflEq ·(A ·R id ·Ih x)).
+
+foldInEq : ∀ R: ★. ∀ id: Id ·R ·FixInd.
+           (Π r: R. FoldR (elimId -id r) ·(Fold (elimId -id r))) ➔
+           ∀ x: F ·R.
+           Eq ·(Fold (inFixInd (elimId -(imap -id) x))) ·(A ·R id ·(λ r: R. Fold (elimId -id r)) x)
+= Λ R. Λ id. λ ih. Λ x.
+  {Ih : R ➔ ★ = λ r: R. Fold (elimId -id r)} -
+  {A' : ★ = A ·R id ·Ih x} -
+  {fold' = foldRIn' ·R -id ·Ih ih -x} -
+  {fix = inFixInd (elimId -(imap -id) x)} -
+  intrEq -(intrId -(λ f. f ·A' -fold') -(λ f. β))
+         -(intrId -(λ a. Λ X. Λ f. elimEqL -(foldRUnique -fix ·A' fold' ·X f) a) -(λ a. β)).
+
+foldIn : ∀ R: ★. ∀ id: Id ·R ·FixInd. (Π r: R. FoldR (elimId -id r) ·(Fold (elimId -id r))) ➔
+         ∀ x: F ·R. FoldR (inFixInd (elimId -(imap -id) x)) ·(Fold (inFixInd (elimId -(imap -id) x)))
+= Λ R. Λ id. λ ih. Λ x.
+  {Ih : R ➔ ★ = λ r: R. Fold (elimId -id r)} -
+  [fold' = foldRIn' ·R -id ·Ih ih -x] -
+  {fix = inFixInd (elimId -(imap -id) x)} -
+  foldRResp -fix fold' -(symEq -(foldInEq ·R -id ih -x)).
+
+foldRExists : Π x: FixInd. FoldR x ·(Fold x)
+= induction ·(λ x: FixInd. FoldR x ·(Fold x))
+  Λ R. Λ id. λ ih. λ x. foldIn ·R -id ih -x.
