@@ -22,10 +22,33 @@ elimId : ∀ X: ★. ∀ Y: ★. Id ·X ·Y ➾ X ➔ Y
 = Λ X. Λ Y. Λ c. λ x. φ (ρ c.2 - β) - (c.1 x) {|x|}.
 
 reflId : ∀ X: ★. Id ·X ·X
-= Λ X. intrId ·X ·X -(λ x. x) -(λ x. β).
+= Λ X. intrId -(λ x. x) -(λ x. β).
 
 transId : ∀ X: ★. ∀ Y: ★. ∀ Z: ★. Id ·X ·Y ➾ Id ·Y ·Z ➾ Id ·X ·Z
 = Λ X. Λ Y. Λ Z. Λ xy. Λ yz. intrId -(λ x. elimId -yz (elimId -xy x)) -(λ x. β).
 
-IdMapping : (★ ➔ ★) ➔ ★
+Mono : (★ ➔ ★) ➔ ★
 = λ F: ★ ➔ ★. ∀ X: ★. ∀ Y: ★. Id ·X ·Y ➾ Id ·(F ·X) ·(F ·Y).
+
+Eq : ★ ➔ ★ ➔ ★
+= λ X: ★. λ Y: ★. ι _: Id ·X ·Y. Id ·Y ·X.
+
+intrEq : ∀ X: ★. ∀ Y: ★. Id ·X ·Y ➾ Id ·Y ·X ➾ Eq ·X ·Y
+= Λ X. Λ Y. Λ xy. Λ yx.
+[intrId -(elimId -xy) -(λ x. β),
+ intrId -(elimId -yx) -(λ x. β)].
+
+elimEqL : ∀ X: ★. ∀ Y: ★. Eq ·X ·Y ➾ X ➔ Y
+= Λ X. Λ Y. Λ eq. elimId -eq.1.
+
+elimEqR : ∀ X: ★. ∀ Y: ★. Eq ·X ·Y ➾ Y ➔ X
+= Λ X. Λ Y. Λ eq. elimId -eq.2.
+
+reflEq : ∀ X: ★. Eq ·X ·X
+= Λ X. intrEq -(reflId ·X) -(reflId ·X).
+
+symEq : ∀ X: ★. ∀ Y: ★. Eq ·X ·Y ➾ Eq ·Y ·X
+= Λ X. Λ Y. Λ eq. intrEq -eq.2 -eq.1.
+
+transEq : ∀ X: ★. ∀ Y: ★. ∀ Z: ★. Eq ·X ·Y ➾ Eq ·Y ·Z ➾ Eq ·X ·Z
+= Λ X. Λ Y. Λ Z. Λ xy. Λ yz. intrEq -(transId -xy.1 -yz.1) -(transId -yz.2 -xy.2).

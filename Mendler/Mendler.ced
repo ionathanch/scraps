@@ -1,6 +1,5 @@
 import Utils.
-
-module Mendler (F: ★ ➔ ★) {imap: IdMapping ·F}.
+module Mendler (F: ★ ➔ ★) {imap: Mono ·F}.
 
 {- Mender F-algebras -}
 

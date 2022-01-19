@@ -1,7 +1,6 @@
 import Utils.
 import Mendler.
-
-module MendlerCV (F: ★ ➔ ★) {imap: IdMapping ·F}.
+module MendlerCV (F: ★ ➔ ★) {imap: Mono ·F}.
 
 {- H-restricted coends -}
 
@@ -57,7 +56,7 @@ indExtInd : ∀ F: ★ ➔ ★. ∀ X: ★. Π x: ExtInd ·F ·X. ∀ Q: ExtInd 
             (∀ R: ★. ∀ id: Id ·R ·X. Π fr: F ·R. Q (intrExtInd ·F ·X ·R -id fr)) ➔ Q x
 = Λ F. Λ X. λ x. Λ Q. λ ih. indCoend ·(λ R: ★. Id ·R ·X) ih x.
 
-imapExt : ∀ F: ★ ➔ ★. IdMapping ·(ExtInd ·F)
+imapExt : ∀ F: ★ ➔ ★. Mono ·(ExtInd ·F)
 = Λ F. Λ A. Λ B. Λ idAB.
   {H : ★ ➔ ★ = λ R: ★. Id ·R ·A} -
   {Q : ExtInd ·F ·A ➔ ★ = λ _: ExtInd ·F ·A. ExtInd ·F ·B} -
@@ -77,7 +76,7 @@ Enr' : ★ ➔ ★
 = λ X: ★. Pair ·(F ·X) ·(X ➔ F ·X).
 
 CVF' : ★ ➔ ★ = ExtInd ·Enr'.
-imapCVF' : IdMapping ·CVF' = imapExt ·Enr'.
+imapCVF' : Mono ·CVF' = imapExt ·Enr'.
 FixCV' : ★ = FixInd ·CVF' imapCVF'.
 
 outCV' : FixCV' ➔ F ·FixCV'
@@ -93,7 +92,7 @@ Enr : ★ ➔ ★
 = λ X: ★. Pair ·(F ·X) ·(ι f: X ➔ F ·X. {f ≃ outCV'}).
 
 CVF : ★ ➔ ★ = ExtInd ·Enr.
-imapCVF : IdMapping ·CVF = imapExt ·Enr.
+imapCVF : Mono ·CVF = imapExt ·Enr.
 FixCV : ★ = FixInd ·CVF imapCVF.
 
 outCV : FixCV ➔ F ·FixCV
