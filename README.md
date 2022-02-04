@@ -43,6 +43,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * IncrementalCycles.idr: An implementation of an acyclic directed graph that can incrementally detect cycles as edges are added.
   This could be used to implement a type synthesis algorithm that can handle floating cumulative universes
   (i.e. universes not attached to some Type 0 at the bottom).
+* TTT.rkt: A simple type theory that's a little more than CoC... but not by much.
 * hm.pl: An incomplete Prolog implementation of Hindley-Milner type inference.
 
 ## Miscellaneous Proofs
