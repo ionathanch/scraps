@@ -2,7 +2,9 @@
 
 (require (rename-in redex/reduction-semantics
                     [define-judgment-form define-judgement-form]
-                    [judgment-holds       judgement-holds]))
+                    [judgment-holds       judgement-holds])
+         (rename-in redex/pict
+                    [render-judgment-form render-judgement-form]))
 
 ;; Truncated Type Theory
 (define-language TTT
@@ -58,10 +60,10 @@
    (λ (x : t) (λ* any ... e))])
 
 (define-metafunction TTT
-  @ : e e ... -> e
-  [(@ e) e]
-  [(@ e e_hd e_tl ...)
-   (@ (e e_hd) e_tl ...)])
+  @* : e e ... -> e
+  [(@* e) e]
+  [(@* e e_hd e_tl ...)
+   (@* (e e_hd) e_tl ...)])
 
 (define-metafunction TTT
   let* : [x e] ... e -> e
