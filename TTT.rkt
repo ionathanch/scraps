@@ -6,7 +6,7 @@
          (rename-in redex/pict
                     [render-judgment-form render-judgement-form])
          pict
-         (only-in graphite save-pict))
+         file/convertible)
 
 ;; Truncated Type Theory
 (define-language TTT
@@ -166,7 +166,9 @@
    ----------- "δ"
    (⊢ Γ x e t)])
 
-(define (render-pretty [filename #f])
+;; Render judgment rules as image
+
+(define (render-pretty)
   (default-style 'swiss)
   (define rules
     (with-compound-rewriters
@@ -186,9 +188,15 @@
                               (list "(let " x " ≔ " e₁ " in " e₂ ")")])]
          ['⊢ (match-lambda [(list _ _ Γ e₁ e₂ t _ ...)
                             (list Γ " ⊢ " e₁ " ≡ " e₂ " : " t)])])
+      #;(render-metafunction rule #:contract? #t)
       (render-judgement-form ⊢)))
-  (define rules-bg
-    (cc-superimpose (colorize (filled-rectangle (pict-width rules) (pict-height rules)) "white") rules))
-  (if filename
-      (save-pict rules-bg filename)
-      (show-pict rules-bg)))
+  (cc-superimpose (colorize (filled-rectangle (pict-width rules) (pict-height rules)) "white") rules))
+
+(define (render-file filename #:type type)
+  (define req
+    (match type
+      ['png 'png@2x-bytes]
+      ['svg 'svg-bytes]))
+  (with-output-to-file filename
+    (thunk (write-bytes (convert (render-pretty) req)))
+    #:exists 'replace))
