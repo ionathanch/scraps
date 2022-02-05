@@ -4,7 +4,9 @@
                     [define-judgment-form define-judgement-form]
                     [judgment-holds       judgement-holds])
          (rename-in redex/pict
-                    [render-judgment-form render-judgement-form]))
+                    [render-judgment-form render-judgement-form])
+         pict
+         (only-in graphite save-pict))
 
 ;; Truncated Type Theory
 (define-language TTT
@@ -31,7 +33,17 @@
   [(rule U △) △]
   [(rule △ U) △])
 
-;; Extend the environment
+;; Extend and extract from the environment
+
+(define-relation TTT
+  :∈ ⊆ x × t × Γ
+  [(:∈ x t Γ)
+   (where (· _ ... (x : t) _ ...) Γ)])
+
+(define-relation TTT
+  =∈ ⊆ x × e × Γ
+  [(=∈ x e Γ)
+   (where (· _ ... (x = e) _ ...) Γ)])
 
 (define-metafunction TTT
   +: : Γ x t -> Γ
@@ -109,7 +121,7 @@
    ----------------- "conv"
    (⊢ Γ e_1 e_2 t_1)]
 
-  [(where (· _ ... (x : t) _ ...) Γ)
+  [(:∈ x t Γ)
    ----------- "∈"
    (⊢ Γ x x t)]
 
@@ -149,7 +161,34 @@
    ------------------------------------------------------------------- "ζ"
    (⊢ Γ (let [x e_1] e_2) (substitute e_2 x e_1) (substitute u x e_1))]
 
-  [(where (· _ ... (x : t) _ ...) Γ)
-   (where (· _ ... (x = e) _ ...) Γ)
+  [(:∈ x t Γ)
+   (=∈ x e Γ)
    ----------- "δ"
    (⊢ Γ x e t)])
+
+(define (render-pretty [filename #f])
+  (default-style 'swiss)
+  (define rules
+    (with-compound-rewriters
+        (['substitute (match-lambda [(list _ _ e_body x e _ ...)
+                                     (list "" e_body "[" x " ↦ " e "]")])]
+         ['rule (match-lambda [(list _ _ U₁ U₂ _ ...)
+                               (list "rule(" U₁ ", " U₂ ")")])]
+         [':∈ (match-lambda [(list _ _ x t Γ _ ...)
+                             (list "(" x " : " t ") ∈ " Γ)])]
+         ['=∈ (match-lambda [(list _ _ x e Γ _ ...)
+                             (list "(" x " ≔ " e ") ∈ " Γ)])]
+         ['+: (match-lambda [(list _ _ Γ x t _ ...)
+                             (list Γ ", " x " : " t)])]
+         ['+= (match-lambda [(list _ _ Γ x t _ ...)
+                             (list Γ ", " x " ≔ " t)])]
+         ['let (match-lambda [(list _ _ (lw (list _ x e₁ _ ...) _ _ _ _ _ _) e₂ _ ...)
+                              (list "(let " x " ≔ " e₁ " in " e₂ ")")])]
+         ['⊢ (match-lambda [(list _ _ Γ e₁ e₂ t _ ...)
+                            (list Γ " ⊢ " e₁ " ≡ " e₂ " : " t)])])
+      (render-judgement-form ⊢)))
+  (define rules-bg
+    (cc-superimpose (colorize (filled-rectangle (pict-width rules) (pict-height rules)) "white") rules))
+  (if filename
+      (save-pict rules-bg filename)
+      (show-pict rules-bg)))
