@@ -2,6 +2,7 @@
 
 (require (rename-in redex/reduction-semantics
                     [define-judgment-form define-judgement-form]
+                    [test-judgment-holds  test-judgement-holds]
                     [judgment-holds       judgement-holds])
          (rename-in redex/pict
                     [render-judgment-form render-judgement-form])
@@ -20,9 +21,13 @@
   (Π (x : t_1) t_2 #:refers-to x)
   (λ (x : t) e #:refers-to x)
   (let [x e_1] e_2 #:refers-to x)
-  (· (x * t) #:...bind (dom x (shadow dom x))))
+  #;(· (x * t) #:...bind (dom x (shadow dom x))))
 
 (default-language TTT)
+(define-syntax-rule (test-term-equal term1 term2)
+  (test-equal (term term1) (term term2)))
+(define-syntax-rule (test-relation-holds rel)
+  (test-predicate identity (term rel)))
 
 ;; ★ is impredicative, the others are not
 (define-metafunction TTT
@@ -127,7 +132,7 @@
 
   [(⊢ Γ t_1 t_2 U_1)
    (⊢ (+: Γ x t_1) u_1 u_2 U_2)
-   --------------------------------------------------------- "Π"
+   -------------------------------------------------------- "Π"
    (⊢ Γ (Π (x : t_1) u_1) (Π (x : t_2) u_2) (rule U_1 U_2))]
   
   [(⊢ Γ t_1 t_2 U)
@@ -166,27 +171,70 @@
    ----------- "δ"
    (⊢ Γ x e t)])
 
+;; Examples
+
+(define D-★
+  (derivation
+   '(⊢ · ★ ★ □) "★" '()))
+(define D-★-weak
+  (derivation
+   '(⊢ (· (X : ★)) ★ ★ □) "★" '()))
+(define D-□
+  (derivation
+   '(⊢ · □ □ △) "□" '()))
+(define D-★△
+  (derivation
+   '(⊢ · ★ ★ △) "U⊆△"
+   (list D-★)))
+
+(define-term ⊥
+  (Π (X : ★) X))
+(test-term-equal (rule □ ★) ★)
+(test-term-equal (+: · X ★) (· (X : ★)))
+(test-relation-holds (:∈ X ★ (· (X : ★))))
+(define D-∈
+  (derivation
+   '(⊢ (· (X : ★)) X X ★) "∈" '()))
+(define D-⊥
+  (derivation
+   `(⊢ · ,(term ⊥) ,(term ⊥) ★) "Π"
+   (list D-★ D-∈)))
+
+(define D-★→★
+  (derivation
+   '(⊢ · (Π (X : ★) ★) (Π (X : ★) ★) □) "Π"
+   (list D-★
+         D-★-weak)))
+
+(test-judgement-holds ⊢ D-★)
+(test-judgement-holds ⊢ D-□)
+(test-judgement-holds ⊢ D-★△)
+(test-judgement-holds ⊢ D-∈)
+(test-judgement-holds ⊢ D-⊥)
+(test-judgement-holds ⊢ D-★→★)
+(test-results)
+
 ;; Render judgment rules as image
 
 (define (render-pretty)
   (default-style 'swiss)
   (define rules
     (with-compound-rewriters
-        (['substitute (match-lambda [(list _ _ e_body x e _ ...)
+        (['substitute (match-lambda [`(,substitute ,< ,e_body ,x ,e ,>)
                                      (list "" e_body "[" x " ↦ " e "]")])]
-         ['rule (match-lambda [(list _ _ U₁ U₂ _ ...)
-                               (list "rule(" U₁ ", " U₂ ")")])]
-         [':∈ (match-lambda [(list _ _ x t Γ _ ...)
+         ['rule (match-lambda [`(,< ,rule ,U₁ ,U₂ ,>)
+                               (list rule "(" U₁ ", " U₂ ")")])]
+         [':∈ (match-lambda [`(,< ,:∈ ,x ,t ,Γ ,>)
                              (list "(" x " : " t ") ∈ " Γ)])]
-         ['=∈ (match-lambda [(list _ _ x e Γ _ ...)
+         ['=∈ (match-lambda [`(,< ,=∈ ,x ,e ,Γ ,>)
                              (list "(" x " ≔ " e ") ∈ " Γ)])]
-         ['+: (match-lambda [(list _ _ Γ x t _ ...)
+         ['+: (match-lambda [`(,< ,+: ,Γ ,x ,t ,>)
                              (list Γ ", " x " : " t)])]
-         ['+= (match-lambda [(list _ _ Γ x t _ ...)
+         ['+= (match-lambda [`(,< ,+= ,Γ ,x ,t ,>)
                              (list Γ ", " x " ≔ " t)])]
-         ['let (match-lambda [(list _ _ (lw (list _ x e₁ _ ...) _ _ _ _ _ _) e₂ _ ...)
+         ['let (match-lambda [`(,< ,let ,(struct* lw ([e `(,<< ,x ,e₁ ,>>)])) ,e₂ ,>)
                               (list "(let " x " ≔ " e₁ " in " e₂ ")")])]
-         ['⊢ (match-lambda [(list _ _ Γ e₁ e₂ t _ ...)
+         ['⊢ (match-lambda [`(,< ,⊢ ,Γ ,e₁ ,e₂ ,t ,>)
                             (list Γ " ⊢ " e₁ " ≡ " e₂ " : " t)])])
       #;(render-metafunction rule #:contract? #t)
       (render-judgement-form ⊢)))
