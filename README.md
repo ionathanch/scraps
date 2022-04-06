@@ -50,6 +50,9 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 
 * IndInd.idr: A demonstration of Idris' inductive–inductive data definitions with a model
   of a simple dependently-typed language with an intrinsically well-formed environment.
+* IndInd.agda: An attempt at encoding an inductive–inductive type in Agda as a mutual indexed type;
+  there appears to be a problem with the elimination principle.
+  (See [Constructing Inductive-Inductive Types via Type Erasure](https://eutypes.cs.ru.nl/eutypes_pmwiki/uploads/Main/books-of-abstracts-TYPES2019.pdf#page=20).)
 * IndRec.agda: Inductive–recursive data definitions in practice with the Kipling embedding
   from [Outrageous but Meaningful Coincidences](https://personal.cis.strath.ac.uk/conor.mcbride/pub/DepRep/DepRep.pdf).
 * DeBruijn.idr: The same language in IndInd, but with de Bruijn indices.
