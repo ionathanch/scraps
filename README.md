@@ -10,6 +10,8 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * PredExt.agda: A straightforward proof that propositional extensionality follows from predicate extensionality.
 * FunExt: An attempt at adding function extensionality as a constructor for the equality type.
   This appears to require an additional parametricity property.
+* untyped-reflect.tex: A LaTeX derivation of falsehood when combining equality reflection with
+  untyped conversion that supports congruence and transitivity.
 
 ## Inconsistencies
 
