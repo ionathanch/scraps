@@ -3,6 +3,8 @@
 open import Agda.Builtin.Equality
 open import Agda.Builtin.Equality.Rewrite
 
+{- Internal definitions -}
+
 data ⊥ : Prop where
 record ⊤ : Prop where
   constructor tt
@@ -16,6 +18,10 @@ record Σ (A : Prop) (B : A → Prop) : Prop where
     snd : B fst
 open Σ
 syntax Σ A (λ x → B) = Σ[ x ∈ A ] B
+_∧_ : Prop → Prop → Prop
+A ∧ B = Σ A (λ _ → B)
+
+{- Universe codes and decoding -}
 
 data U : Set
 data Ω : Set
@@ -42,65 +48,72 @@ em Unit = ⊤
 em (PiUΩ A B) = (a : el A) → em (B a)
 em (PiΩΩ A B) = (a : em A) → em (B a)
 
-EqU : U → U → Prop
+{- Equality of Ωs -}
+
 EqΩ : Ω → Ω → Prop
-CastU : (A B : U) → EqU A B → el A → el B
-CastΩ : (A B : Ω) → EqΩ A B → em A → em B
-symU : {A B : U} → EqU A B → EqU B A
+EqΩ A B = (em A → em B) ∧ (em B → em A)
+
+castΩ : (A B : Ω) → EqΩ A B → em A → em B
+castΩ _ _ (to , from) x = to x
+
 symΩ : {A B : Ω} → EqΩ A B → EqΩ B A
+symΩ (to , from) = from , to
+
+ReflΩ : {A : Ω} → EqΩ A A
+ReflΩ = (λ a → a) , (λ a → a)
+
+{- Equality of Us -}
+
+EqU : U → U → Prop
+castU : (A B : U) → EqU A B → el A → el B
+symU : {A B : U} → EqU A B → EqU B A
 
 EqU Nat Nat = ⊤
-EqU (PiUU A B) (PiUU A' B') = Σ[ p ∈ EqU A A' ] (∀ (a' : el A') → EqU (B (CastU A' A (symU {A} p) a')) (B' a'))
-EqU (PiΩU A B) (PiΩU A' B') = Σ[ p ∈ EqΩ A A' ] (∀ (a' : em A') → EqU (B (CastΩ A' A (symΩ p) a')) (B' a'))
+EqU (PiUU A B) (PiUU A' B') = Σ[ p ∈ EqU A A' ] (∀ (a' : el A') → EqU (B (castU A' A (symU {A} p) a')) (B' a'))
+EqU (PiΩU A B) (PiΩU A' B') = Σ[ p ∈ EqΩ A A' ] (∀ (a' : em A') → EqU (B (castΩ A' A (symΩ p) a')) (B' a'))
 EqU _ _ = ⊥
 
-EqΩ Empty Empty = ⊤
-EqΩ Unit Unit = ⊤
-EqΩ (PiUΩ A B) (PiUΩ A' B') = Σ[ p ∈ EqU A A' ] (∀ (a' : el A') → EqΩ (B (CastU A' A (symU p) a')) (B' a'))
-EqΩ (PiΩΩ A B) (PiΩΩ A' B') = Σ[ p ∈ EqΩ A A' ] (∀ (a' : em A') → EqΩ (B (CastΩ A' A (symΩ {A} p) a')) (B' a'))
-EqΩ _ _ = ⊥
-
-CastU Nat Nat p zero = zero
-CastU Nat Nat p (succ n) = succ (CastU Nat Nat p n)
-CastU (PiUU A B) (PiUU A' B') p f = λ a' →
-  let a = CastU A' A (symU (fst p)) a'
-  in CastU (B a) (B' a') (snd p a') (f a)
-CastU (PiΩU A B) (PiΩU A' B') p f = λ a' →
-  let a = CastΩ A' A (symΩ (fst p)) a'
-  in CastU (B a) (B' a') (snd p a') (f a)
-
-CastΩ Empty Empty p ()
-CastΩ Unit Unit p tt = tt
-CastΩ (PiUΩ A B) (PiUΩ A' B') p f = λ a' →
-  let a = CastU A' A (symU (fst p)) a'
-  in CastΩ (B a) (B' a') (snd p a') (f a)
-CastΩ (PiΩΩ A B) (PiΩΩ A' B') p f = λ a' →
-  let a = CastΩ A' A (symΩ (fst p)) a'
-  in CastΩ (B a) (B' a') (snd p a') (f a)
+castU Nat Nat p zero = zero
+castU Nat Nat p (succ n) = succ (castU Nat Nat p n)
+castU (PiUU A B) (PiUU A' B') (aa' , bb') f = λ a' →
+  let a = castU A' A (symU aa') a'
+  in castU (B a) (B' a') (bb' a') (f a)
+castU (PiΩU A B) (PiΩU A' B') (aa' , bb') f = λ a' →
+  let a = castΩ A' A (symΩ aa') a'
+  in castU (B a) (B' a') (bb' a') (f a)
 
 postulate
-  CastUU : ∀ {A : U} {p : EqU A A} (a : el A) → CastU A A p a ≡ a
-  CastU2 : ∀ {A B : U} {p : EqU A B} {q : EqU B A} (a : el A) → CastU B A q (CastU A B p a) ≡ a
+  castUU : ∀ {A : U} {p : EqU A A} (a : el A) → castU A A p a ≡ a
+  castU2 : ∀ {A B : U} {p : EqU A B} {q : EqU B A} (a : el A) → castU B A q (castU A B p a) ≡ a
 
-{-# REWRITE CastUU CastU2 #-}
+{-# REWRITE castUU castU2 #-}
 
 symU {Nat} {Nat} tt = tt
-symU {PiUU A B} {PiUU A' B'} (p , f) = symU p , λ a → symU (f (CastU A A' p a))
-symU {PiΩU A B} {PiΩU A' B'} (p , f) = symΩ p , λ a → symU (f (CastΩ A A' p a))
+symU {PiUU A B} {PiUU A' B'} (p , f) = symU p , λ a → symU (f (castU A A' p a))
+symU {PiΩU A B} {PiΩU A' B'} (p , f) = symΩ p , λ a → symU (f (castΩ A A' p a))
 
-symΩ {Empty} {Empty} tt = tt
-symΩ {Unit} {Unit} tt = tt
-symΩ {PiUΩ A B} {PiUΩ A' B'} (p , f) = symU p , λ a → symΩ (f (CastU A A' p a))
-symΩ {PiΩΩ A B} {PiΩΩ A' B'} (p , f) = symΩ p , λ a → symΩ (f (CastΩ A A' p a))
+ReflU : {A : U} → EqU A A
+ReflU {Nat} = tt
+ReflU {PiUU A B} = ReflU , λ a' → ReflU
+ReflU {PiΩU A B} = ReflΩ , λ a' → ReflU
 
-reflU : {A : U} → EqU A A
-reflΩ : {A : Ω} → EqΩ A A
+{- Equality of terms in U types -}
 
-reflU {Nat} = tt
-reflU {PiUU A B} = reflU , λ a' → reflU
-reflU {PiΩU A B} = reflΩ , λ a' → reflU
+eqU : (A : U) → (a b : el A) → Prop
+eqU Nat zero zero = ⊤
+eqU Nat (succ n) (succ m) = eqU Nat n m
+eqU Nat _ _ = ⊥
+eqU (PiUU A B) f g = (a : el A) → eqU (B a) (f a) (g a)
+eqU (PiΩU A B) f g = (a : em A) → eqU (B a) (f a) (g a)
 
-reflΩ {Empty} = tt
-reflΩ {Unit} = tt
-reflΩ {PiUΩ A B} = reflU , λ a' → reflΩ
-reflΩ {PiΩΩ A B} = reflΩ , λ a' → reflΩ
+reflU : {A : U} → (a : el A) → eqU A a a
+reflU {Nat} zero = tt
+reflU {Nat} (succ n) = reflU n
+reflU {PiUU A B} f = λ a → reflU {B a} (f a)
+reflU {PiΩU A B} f = λ a → reflU {B a} (f a)
+
+transp : (A : U) → (t : el A) → (P : (x : el A) → eqU A t x → Ω) → em (P t (reflU t)) → (t' : el A) → (p : eqU A t t') → em (P t' p)
+transp Nat zero P d zero tt = d
+transp Nat (succ n) P d (succ m) p = transp Nat n (λ x p → P (succ x) p) d m p
+transp (PiUU A B) f P d g p = {!   !}
+transp (PiΩU A B) f P d g p = {!   !}
