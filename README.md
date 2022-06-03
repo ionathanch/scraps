@@ -38,6 +38,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * Equality.agda: Implementing propositional equality from scratch using rewrite rules 
   (see [Notes on Propositional Equality](https://ionathan.ch/2021/05/25/notes-on-equality.html)).
 * DIP.ced: Demonstration that Cedille refutes UIP due to the Kleene trick.
+* ObsEq.agda: An attempt at encoding observational equality à la Tarski as recursion over codes.
 
 ## Programs
 

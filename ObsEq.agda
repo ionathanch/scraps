@@ -1,76 +1,106 @@
-{-# OPTIONS --prop #-}
+{-# OPTIONS --prop --rewriting #-}
 
-open import Agda.Primitive
+open import Agda.Builtin.Equality
+open import Agda.Builtin.Equality.Rewrite
 
-variable
-  ℓ : Level
-  A B : Set ℓ
+data ⊥ : Prop where
+record ⊤ : Prop where
+  constructor tt
+data ℕ : Set where
+  zero : ℕ
+  succ : ℕ → ℕ
+record Σ (A : Prop) (B : A → Prop) : Prop where
+  constructor _,_
+  field
+    fst : A
+    snd : B fst
+open Σ
+syntax Σ A (λ x → B) = Σ[ x ∈ A ] B
 
-infix 10 _≡_
-data _≡_ {A : Set ℓ} (a : A) : A → Prop ℓ where
-  refl : a ≡ a
+data U : Set
+data Ω : Set
+el : U → Set
+em : Ω → Prop
+
+data U where
+  Nat : U
+  PiUU : (A : U) → (el A → U) → U
+  PiΩU : (A : Ω) → (em A → U) → U
+
+data Ω where
+  Empty : Ω
+  Unit : Ω
+  PiUΩ : (A : U) → (el A → Ω) → Ω
+  PiΩΩ : (A : Ω) → (em A → Ω) → Ω
+
+el Nat = ℕ
+el (PiUU A B) = (a : el A) → el (B a)
+el (PiΩU A B) = (a : em A) → el (B a)
+
+em Empty = ⊥
+em Unit = ⊤
+em (PiUΩ A B) = (a : el A) → em (B a)
+em (PiΩΩ A B) = (a : em A) → em (B a)
+
+EqU : U → U → Prop
+EqΩ : Ω → Ω → Prop
+CastU : (A B : U) → EqU A B → el A → el B
+CastΩ : (A B : Ω) → EqΩ A B → em A → em B
+symU : {A B : U} → EqU A B → EqU B A
+symΩ : {A B : Ω} → EqΩ A B → EqΩ B A
+
+EqU Nat Nat = ⊤
+EqU (PiUU A B) (PiUU A' B') = Σ[ p ∈ EqU A A' ] (∀ (a' : el A') → EqU (B (CastU A' A (symU {A} p) a')) (B' a'))
+EqU (PiΩU A B) (PiΩU A' B') = Σ[ p ∈ EqΩ A A' ] (∀ (a' : em A') → EqU (B (CastΩ A' A (symΩ p) a')) (B' a'))
+EqU _ _ = ⊥
+
+EqΩ Empty Empty = ⊤
+EqΩ Unit Unit = ⊤
+EqΩ (PiUΩ A B) (PiUΩ A' B') = Σ[ p ∈ EqU A A' ] (∀ (a' : el A') → EqΩ (B (CastU A' A (symU p) a')) (B' a'))
+EqΩ (PiΩΩ A B) (PiΩΩ A' B') = Σ[ p ∈ EqΩ A A' ] (∀ (a' : em A') → EqΩ (B (CastΩ A' A (symΩ {A} p) a')) (B' a'))
+EqΩ _ _ = ⊥
+
+CastU Nat Nat p zero = zero
+CastU Nat Nat p (succ n) = succ (CastU Nat Nat p n)
+CastU (PiUU A B) (PiUU A' B') p f = λ a' →
+  let a = CastU A' A (symU (fst p)) a'
+  in CastU (B a) (B' a') (snd p a') (f a)
+CastU (PiΩU A B) (PiΩU A' B') p f = λ a' →
+  let a = CastΩ A' A (symΩ (fst p)) a'
+  in CastU (B a) (B' a') (snd p a') (f a)
+
+CastΩ Empty Empty p ()
+CastΩ Unit Unit p tt = tt
+CastΩ (PiUΩ A B) (PiUΩ A' B') p f = λ a' →
+  let a = CastU A' A (symU (fst p)) a'
+  in CastΩ (B a) (B' a') (snd p a') (f a)
+CastΩ (PiΩΩ A B) (PiΩΩ A' B') p f = λ a' →
+  let a = CastΩ A' A (symΩ (fst p)) a'
+  in CastΩ (B a) (B' a') (snd p a') (f a)
 
 postulate
-  transp : ∀ {a b : A} (P : ∀ x → a ≡ x → Prop ℓ) → P a refl → ∀ p → P b p
-  subst : ∀ {a b} (P : A → Prop ℓ) → a ≡ b → P a → P b
-  cast : A ≡ B → A → B
-  castrefl : ∀ (a : A) (p : A ≡ A) → a ≡ cast p a
--- normally can be proven by pattern-matching
--- transp P d refl = d
--- subst P refl pa = pa
--- cast refl a = a
--- castrefl a refl = refl
+  CastUU : ∀ {A : U} {p : EqU A A} (a : el A) → CastU A A p a ≡ a
+  CastU2 : ∀ {A B : U} {p : EqU A B} {q : EqU B A} (a : el A) → CastU B A q (CastU A B p a) ≡ a
 
--- transport can be proven from only subst
--- normally (λ _ → d) wouldn't be a proof of ∀ (p : a ≡ a) → P a p,
--- but proof irrelevance of equality easily provides p ≡ refl definitionally
-transport : ∀ {A : Set ℓ} {a b} (P : ∀ (x : A) → a ≡ x → Prop ℓ) → P a refl → ∀ p → P b p
-transport {ℓ} {A} {a} {b} P d p = subst (λ x → ∀ (p : a ≡ x) → P x p) p (λ _ → d) p
+{-# REWRITE CastUU CastU2 #-}
 
--- equality is a congruent equivalence relation
+symU {Nat} {Nat} tt = tt
+symU {PiUU A B} {PiUU A' B'} (p , f) = symU p , λ a → symU (f (CastU A A' p a))
+symU {PiΩU A B} {PiΩU A' B'} (p , f) = symΩ p , λ a → symU (f (CastΩ A A' p a))
 
--- symmetry/inverse
-infix 30 _⁻¹
-_⁻¹ : ∀ {a b : A} → a ≡ b → b ≡ a
-_⁻¹ {a = a} {b = b} p = subst (λ x → x ≡ a) p refl
+symΩ {Empty} {Empty} tt = tt
+symΩ {Unit} {Unit} tt = tt
+symΩ {PiUΩ A B} {PiUΩ A' B'} (p , f) = symU p , λ a → symΩ (f (CastU A A' p a))
+symΩ {PiΩΩ A B} {PiΩΩ A' B'} (p , f) = symΩ p , λ a → symΩ (f (CastΩ A A' p a))
 
--- transitivity/composition
-infix 20 _·_
-_·_ : ∀ {a b c : A} → a ≡ b → b ≡ c → a ≡ c
-_·_ {a = a} {b = b} {c = c} p q = subst (λ x → a ≡ x) q p
+reflU : {A : U} → EqU A A
+reflΩ : {A : Ω} → EqΩ A A
 
--- congruence/ap
-ap : ∀ {a b : A} (f : A → B) → a ≡ b → f a ≡ f b
-ap {a = a} {b = b} f p = subst (λ x → f a ≡ f x) p refl
+reflU {Nat} = tt
+reflU {PiUU A B} = reflU , λ a' → reflU
+reflU {PiΩU A B} = reflΩ , λ a' → reflU
 
--- equality is a groupoid wrt inverse and composition
--- these don't type check because _≡_ isn't polymorphic over relevance,
--- but they hold trivially because they're proof irrelevant and well typed
--- they can also be proven using transp but why would you do that?
--- associativity : ∀ {a b c d : A} (p : a ≡ b) (q : b ≡ c) (r : c ≡ d) → p · (q · r) ≡ (p · q) · r
--- identity-left : ∀ {a b : A} (p : a ≡ b) → refl · p ≡ p
--- identity-right : ∀ {a b : A} (p : a ≡ b) → p · refl ≡ p
--- inverse-left : ∀ {a b : A} (p : a ≡ b) → p ⁻¹ · p ≡ refl
--- inverse-right : ∀ {a b : A} (p : a ≡ b) → p · p ⁻¹ ≡ refl
-
--- J eliminator (proof-relevant transport) for MLTT identity type
--- this gets stuck on J P d refl if P is neutral bc cast matches on P a
-J : ∀ {a b : A} (P : ∀ x → a ≡ x → Set ℓ) → P a refl → ∀ p → P b p
-J {a = a} {b = b} P d p = cast (transp (λ x q → P a refl ≡ P x q) refl p) d
-
--- likewise, proof-relevant substitution suffers from the same problem:
--- it'll get stuck on substitution P refl pa if P is neutral
-substitution : ∀ {a b} (P : A → Set ℓ) → a ≡ b → P a → P b
-substitution {a = a} P p pa = cast (transp (λ x _ → P a ≡ P x) refl p) pa
-
--- bonus: contractibility of singletons from subst,
--- using the same proof irrelevance trick as for transport
-
-data DPair (A : Set ℓ) (B : A → Prop ℓ) : Set ℓ where
-  dpair : ∀ a → B a → DPair A B
-
-syntax DPair A (λ x → B) = Σ[ x ∈ A ] B
-syntax dpair a b = ⟨ a , b ⟩
-
-contrasing : ∀ {a} (p : Σ[ x ∈ A ] (a ≡ x)) → ⟨ a , refl ⟩ ≡ p
-contrasing {a = a} ⟨ b , p ⟩ = subst (λ x → ∀ (p : a ≡ x) → ⟨ a , refl ⟩ ≡ ⟨ x , p ⟩) p (λ _ → refl) p
+reflΩ {Empty} = tt
+reflΩ {Unit} = tt
+reflΩ {PiUΩ A B} = reflU , λ a' → reflΩ
+reflΩ {PiΩΩ A B} = reflΩ , λ a' → reflΩ
