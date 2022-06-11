@@ -7,6 +7,8 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * PropExt.idr: A reproduction of the proof in [this paper](https://doi.org/10.23638/LMCS-16(2:14)2020)
   that impredicativity with some form of propositional extensionality yields non-normalization.
   The final `Omega` term will not compute since Idris doesn't have a proof-irrelevant `Prop`.
+* PropImpred.agda: Another reproduction of the proofs in the above,
+  but without using any notion of equality explicitly.
 * PredExt.agda: A straightforward proof that propositional extensionality follows from predicate extensionality.
 * FunExt: An attempt at adding function extensionality as a constructor for the equality type.
   This appears to require an additional parametricity property.
