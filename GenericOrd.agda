@@ -9,8 +9,7 @@ open import Agda.Primitive
 open import Data.Fin using (_≟_ ; _<_)
 open import Relation.Nullary using (yes ; no)
 
-{-# NO_UNIVERSE_CHECK #-}
-record Ord {ℓ} (A : Set ℓ) : Setω where
+record Ord {ℓ} (A : Set ℓ) : Setω₁ where
   field
     _<ᵒ_ : A → A → Setω
 open Ord ⦃...⦄ public
