@@ -40,7 +40,7 @@ module _ {P I ℓ} {A : Indexed P I ℓ} (H : HasDesc {P} {I} A) where
 
     ordCon _ var refl refl _ _ = ⊤ω
     ordCon _ (pi-irr ⦃ _ ⦄ ⦃ H ⦄) (irrv _ , x) (irrv _ , y) accx accy = ordCon _ H x y accx accy
-    ordCon _ (pi-rel ⦃ ord ⦄ ⦃ H ⦄) (sx , x) (sy , y) accx accy =
+    ordCon _ (pi-rel ⦃ _ ⦄ ⦃ H ⦄) (sx , x) (sy , y) accx accy =
       Σω (sx ≡ sy) (λ {refl → ordCon _ H x y accx accy})
     ordCon .(A ⊗ B) (prod {A} {B} ⦃ Ha ⦄ ⦃ Hb ⦄) (xa , xb) (ya , yb) (accxa , accxb) (accya , accyb) =
       ordIndArg A xa ya accxa accya ×ω ordCon B Hb xb yb accxb accyb
