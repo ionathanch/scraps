@@ -69,6 +69,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * Acc.agda: An attempt at formalizing the quicksort example from [this Tweet](https://twitter.com/jonmsterling/status/1444640259552251921)
   originally found in [Modelling General Recursion in Type Theory](http://dx.doi.org/10.1017/S0960129505004822) but failed at Step 3.
 * GenericOrd.agda: An attempt at defining some sort of type-level `Ord` using [Practical Generic Programming](https://jesper.sikanda.be/files/practical-generic-programming.pdf).
+* CwF.agda: A definition of a category with families in Agda, complete with equalities that must be satisfied.
 * Cedille.ced: A cheat sheet for Cedille; see the [wiki page](https://github.com/ionathanch/ionathanch/wiki/Cedille).
 * CastTpEq.ced: The Cast and TpEq constructs used in various Cedille developments, also found in the [core library](https://github.com/cedille/cedille/tree/master/new-lib/core).
 * Mendler: Mendler-style encodings of (weak, strong) induction in Cedille.
