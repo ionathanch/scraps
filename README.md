@@ -49,6 +49,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
   This could be used to implement a type synthesis algorithm that can handle floating cumulative universes
   (i.e. universes not attached to some Type 0 at the bottom).
 * TTT.rkt: A simple type theory that's a little more than CoC... but not by much.
+* cedille.rkt: An abandoned Redex model of Cedille that never made it past syntax.
 * hm.pl: An incomplete Prolog implementation of Hindley-Milner type inference.
 
 ## Miscellaneous Proofs
