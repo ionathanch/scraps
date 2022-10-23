@@ -48,6 +48,8 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * IncrementalCycles.idr: An implementation of an acyclic directed graph that can incrementally detect cycles as edges are added.
   This could be used to implement a type synthesis algorithm that can handle floating cumulative universes
   (i.e. universes not attached to some Type 0 at the bottom).
+* Fib.agda: The nth Fibonacci number via instance search of a data type encoding the recursive structure of computing them
+  (for @braxtonhall).
 * TTT.rkt: A simple type theory that's a little more than CoC... but not by much.
 * cedille.rkt: An abandoned Redex model of Cedille that never made it past syntax.
 * hm.pl: An incomplete Prolog implementation of Hindley-Milner type inference.
