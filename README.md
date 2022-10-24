@@ -1,6 +1,6 @@
-# Models of ECC
+# Mechanizations of ECC
 
-This repository contains various different ways of modelling Luo's Extended Calculus of Constructions, usually with a few additions:
+This repository contains various different very incomplete mechanizations of Luo's Extended Calculus of Constructions, usually with a few additions:
 
 * Local definitions (let expressions), with or without type annotations
 * Booleans with dependent conditionals (elimination)
