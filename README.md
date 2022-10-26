@@ -73,7 +73,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
   originally found in [Modelling General Recursion in Type Theory](http://dx.doi.org/10.1017/S0960129505004822) but failed at Step 3.
 * GenericOrd.agda: An attempt at defining some sort of type-level `Ord` using [Practical Generic Programming](https://jesper.sikanda.be/files/practical-generic-programming.pdf).
 * CwF.agda, CwFModel.agda: A definition of a category with families in Agda, complete with equalities that must be satisfied,
-  and an attempt at a model where substitutions are defined as an inductive type.
+  and a model using induction--recursion to define type encodings.
 * Cedille.ced: A cheat sheet for Cedille; see the [wiki page](https://github.com/ionathanch/ionathanch/wiki/Cedille).
 * CastTpEq.ced: The Cast and TpEq constructs used in various Cedille developments, also found in the [core library](https://github.com/cedille/cedille/tree/master/new-lib/core).
 * Mendler: Mendler-style encodings of (weak, strong) induction in Cedille.
