@@ -28,6 +28,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
   that non-strictly positive inductive types with an impredicative universe yields `Void`.
 * StrictPositivity.agda: Same thing as above but in Agda.
 * NestedPositivity.v: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
+* SizedFalse.agda: A few short proofs of false using sized types.
 
 ## Propositional Equality
 
@@ -54,16 +55,21 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * cedille.rkt: An abandoned Redex model of Cedille that never made it past syntax.
 * hm.pl: An incomplete Prolog implementation of Hindley-Milner type inference.
 
-## Miscellaneous Proofs
-
+## Models
 * IndInd.idr: A demonstration of Idris' inductive–inductive data definitions with a model
   of a simple dependently-typed language with an intrinsically well-formed environment.
 * IndInd.agda: An attempt at encoding an inductive–inductive type in Agda as a mutual indexed type;
   there appears to be a problem with the elimination principle.
   (See [Constructing Inductive-Inductive Types via Type Erasure](https://eutypes.cs.ru.nl/eutypes_pmwiki/uploads/Main/books-of-abstracts-TYPES2019.pdf#page=20).)
+* DeBruijn.idr: The same language in IndInd, but with de Bruijn indices.
 * IndRec.agda: Inductive–recursive data definitions in practice with the Kipling embedding
   from [Outrageous but Meaningful Coincidences](https://personal.cis.strath.ac.uk/conor.mcbride/pub/DepRep/DepRep.pdf).
-* DeBruijn.idr: The same language in IndInd, but with de Bruijn indices.
+* CwF.agda, CwFModel.agda: A definition of a category with families in Agda, complete with equalities that must be satisfied,
+  and a model using induction--recursion to define type encodings.
+* Universes.lagda.md: Various ways to model a universe hierarchy.
+
+## Miscellaneous Proofs
+
 * NatProps.idr: Proof of 0 ≠ 1 and injectivity of the successor constructor for naturals.
 * Ordinals.idr: A construction of some large ordinals following [Ordinals in Type Theory](http://www.cse.chalmers.se/~coquand/ordinal.ps).
 * Ordinals.ced: The generalization of ordinal trees in an impredicative setting is not well-founded.
@@ -72,8 +78,6 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * Acc.agda: An attempt at formalizing the quicksort example from [this Tweet](https://twitter.com/jonmsterling/status/1444640259552251921)
   originally found in [Modelling General Recursion in Type Theory](http://dx.doi.org/10.1017/S0960129505004822) but failed at Step 3.
 * GenericOrd.agda: An attempt at defining some sort of type-level `Ord` using [Practical Generic Programming](https://jesper.sikanda.be/files/practical-generic-programming.pdf).
-* CwF.agda, CwFModel.agda: A definition of a category with families in Agda, complete with equalities that must be satisfied,
-  and a model using induction--recursion to define type encodings.
 * Cedille.ced: A cheat sheet for Cedille; see the [wiki page](https://github.com/ionathanch/ionathanch/wiki/Cedille).
 * CastTpEq.ced: The Cast and TpEq constructs used in various Cedille developments, also found in the [core library](https://github.com/cedille/cedille/tree/master/new-lib/core).
 * Mendler: Mendler-style encodings of (weak, strong) induction in Cedille.
