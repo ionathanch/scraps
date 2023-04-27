@@ -222,10 +222,94 @@ since `U` and `el` are no longer inductive–recursive.
       p = funext (λ a → el≡ j<k (B a))
 ```
 
-Some questions I'm currently working on:
+## Once Again with Accessibility
 
-* Can this type-in-type model of universes be constructed using accessibility predicates,
-  similar to how the Kovács model is done?
-* What does type-in-type now *mean*?
-  What kind of syntactic type theory does this correspond to?
-  Would such a type theory even be useable?
+It turns out it is possible to define the type-in-type model via accessibility of levels
+using the same trick in Kovács' model,
+but instead of parametrizing `U'` and `el'` over only smaller instances of `U'`,
+we parametrize them over smaller instances of both `U'` and `el'`.
+They are then used in the domain of function types,
+which belong to a smaller universe.
+
+```agda
+  module TypeInTypeAcc (wf : ∀ k → Acc k) where
+    data U' k (U<  : ∀ {j} → j < k → Set)
+              (el< : ∀ {j} → (j<k : j < k) → U< j<k → Set) : Set where
+      Û : ∀ {j} → j ≤ k → U' k U< el<
+      Bottom : U' k U< el<
+      Pi : ∀ {j} → (j<k : j < k) → (A : U< j<k) → (el< j<k A → U' k U< el<) → U' k U< el<
+
+    el' : ∀ {k} (U<  : ∀ {j} → j < k → Set)
+                (el< : ∀ {j} → (j<k : j < k) → U< j<k → Set) →
+          U' k U< el< → Set
+    el' U< el< (Û {k} eq) = U' k U< el<
+    el' U< el< (Û {j} (lt j<k)) = U' j (λ i<j → U< (trans< i<j j<k)) (λ i<j → el< (trans< i<j j<k))
+    el' _ _ Bottom = ⊥
+    el' U< el< (Pi j<k A B) = (a : el< j<k A) → (el' U< el< (B a))
+```
+
+Once again, we define `U<` and `el<` by mutual induction over accessibility,
+then tie the knot with well-foundedness of the levels.
+
+```agda
+    U<  : ∀ {k} → Acc k → ∀ {j} → j < k → Set
+    el< : ∀ {k} (p : Acc k) {j} (j<k : j < k) → U< p j<k → Set
+
+    U<  (acc f) {j} j<k = U' j (U< (f j<k)) (el< (f j<k))
+    el< (acc f) {j} j<k = el'  (U< (f j<k)) (el< (f j<k))
+
+    U : ∀ k → Set
+    U k = U' k (U< (wf k)) (el< (wf k))
+
+    el : ∀ {k} → U k → Set
+    el {k} = el' (U< (wf k)) (el< (wf k))
+```
+
+Defining lifting from smaller universes to larger universes directly is difficult.
+Instead, we lift `U'`, generalizing over all accessibility predicates involved
+so that applying `AccIsProp` is simpler,
+then instantiate with `wf` as needed.
+
+```agda
+    lift' : ∀ {j k} {accj : Acc j} {acck : Acc k} → j < k →
+      U' j (U< accj) (el< accj) → U' k (U< acck) (el< acck)
+    lift' j<k (Û {k} eq) = Û (lt j<k)
+    lift' j<k (Û {i} (lt i<j)) = Û (lt (trans< i<j j<k))
+    lift' _ Bottom = Bottom
+    lift' {_} {_} {acc f} {acc g} j<k (Pi i<j A B)
+      rewrite AccIsProp (f i<j) (g (trans< i<j j<k)) =
+      Pi (trans< i<j j<k) A (λ a → lift' j<k (B a))
+
+    lift : ∀ {j k} → j < k → U j → U k
+    lift = lift'
+```
+
+Unfortunately, proving `el≡` is much more complicated.
+We can generalize over all accessibility predicates as above.
+
+```agda
+    el≡' : ∀ {j k} {accj : Acc j} {acck : Acc k} (j<k : j < k) (u : U' j (U< accj) (el< accj)) →
+      el' (U< accj) (el< accj) u ≡ el' (U< acck) (el< acck) (lift' j<k u)
+    el≡' {j} {k} {acc f} {acc g} j<k (Û eq) = {!   !}
+    el≡' {_} {_} {acc f} {acc g} j<k (Û (lt i<j)) = {!   !}
+    el≡' j<k Bottom = refl
+    el≡' {_} {_} {acc f} {acc g} j<k (Pi i<j A B) = {!   !}
+
+    el≡ : ∀ {j k} (j<k : j < k) (u : U j) → el u ≡ el (lift j<k u)
+    el≡ = el≡'
+```
+
+Where the holes remain, things start to get hairy.
+The first hole, for instance, requires that we show that
+
+```haskell
+U' j (λ {i} i<j → U' i (U< (f i<j)) (el< (f i<j)))
+     (λ {i} i<j → el'  (U< (f i<j)) (el< (f i<j))) ≡
+U' j (λ {i} i<j → U' i (U< (g (trans< i<j j<k))) (el< (g (trans< i<j j<k))))
+     (λ {i} i<j → el'  (U< (g (trans< i<j j<k))) (el< (g (trans< i<j j<k))))
+```
+
+which, while true, requires a ton of applications of `cong` over `funext` and `AccIsProp`.
+And that's only the simplest case,
+with the final hole likely being the most complex,
+so for now I leave them as holes.
