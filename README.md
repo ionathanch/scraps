@@ -68,6 +68,8 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * CwF.agda, CwFModel.agda: A definition of a category with families in Agda, complete with equalities that must be satisfied,
   and a model using induction--recursion to define type encodings.
 * Universes.lagda.md: Various ways to model a universe hierarchy.
+* StraTT.agda: A model of the universes of stratified type theory with explicit universe levels.
+  The actual structures for the types are excluded because working with accessibility predicates is too messy.
 
 ## Miscellaneous Proofs
 
