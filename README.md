@@ -29,6 +29,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * StrictPositivity.agda: Same thing as above but in Agda.
 * NestedPositivity.v: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
 * SizedFalse.agda: A few short proofs of false using sized types.
+* CoquandGirard.agda: Abandoned attempt at mechanizing Girard's original paradox as described by Coquand.
 
 ## Propositional Equality
 
