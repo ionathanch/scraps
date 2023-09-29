@@ -7,7 +7,7 @@ open import Relation.Binary.PropositionalEquality.Core
 {-# BUILTIN REWRITE _≡_ #-}
 
 {-- GUARDED TYPE THEORY PRIMITIVES --}
--- https://github.com/agda/agda/blob/master/test/Succeed/LaterPrims.agda
+-- https://github.com/agda/guarded/blob/forcing-ticks/src/Guarded/Later.agda
 
 primitive primLockUniv : Set₁
 postulate Tick : primLockUniv
