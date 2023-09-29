@@ -1,0 +1,38 @@
+module inj.
+
+import CastTpEq.
+
+data Nat : ★ =
+| zero : Nat
+| succ : Nat ➔ Nat.
+
+data IfZR (A: ★) (B: Nat ➔ ★) : Nat ➔ ★ ➔ ★ =
+| ifZZ : ∀ X: ★. TpEq' ·X ·A ➾ IfZR zero ·X
+| ifZS : ∀ n: Nat. ∀ X: ★. TpEq' ·X ·(B n) ➾ IfZR (succ n) ·X.
+
+IfZ : ★ ➔ (Nat ➔ ★) ➔ Nat ➔ ★ =
+λ A: ★. λ B: Nat ➔ ★. λ n: Nat. ∀ X: ★. IfZR ·A ·B n ·X ➾ X.
+
+ifZResp : ∀ A: ★. ∀ B: Nat ➔ ★. ∀ n: Nat. ∀ T: ★. IfZR ·A ·B n ·T ➔
+          ∀ U: ★. TpEq' ·T ·U ➾ IfZR ·A ·B n ·U
+= Λ A. Λ B. Λ n. Λ T. λ ifz. σ ifz {
+| ifZZ ·X -tpeqTA ➔ Λ U. Λ tpeqTU.
+  ifZZ -(tpEqTrans' -(tpEqSym' -tpeqTU) -tpeqTA)
+| ifZS -n ·X -tpeqTB ➔ Λ U. Λ tpeqTU.
+  ifZS ·A -n -(tpEqTrans' -(tpEqSym' -tpeqTU) -tpeqTB)
+}.
+
+ifZUnique : ∀ A: ★. ∀ B: Nat ➔ ★. ∀ n: Nat. ∀ T: ★. IfZR ·A ·B n ·T ➔
+            ∀ U: ★. IfZR ·A ·B n ·U ➔ TpEq' ·T ·U
+= Λ A. Λ B. Λ n. Λ T. λ ifzT. σ ifzT {
+| ifZZ ·T -tpeqTA ➔ Λ U. λ ifzU.
+  σ ifzU @(λ n: Nat. λ U: ★. λ _: IfZR ·A ·B n ·U. {n ≃ zero} ➔ TpEq' ·T ·U) {
+  | ifZZ ·U -tpeqUA ➔ λ p. tpEqTrans' -tpeqTA -(tpEqSym' -tpeqUA)
+  | ifZS -n ·B -tpeqUB ➔ λ p. δ - p
+  } β
+| ifZS -n ·T -tpeqTB ➔ Λ U. λ ifzU.
+  σ ifzU @(λ n': Nat. λ U: ★. λ _: IfZR ·A ·B n' ·U. {n' ≃ succ n} ➔ TpEq' ·T ·U) {
+  | ifZZ ·U -tpeqUA ➔ λ p. δ - p
+  | ifZS -n ·U -tpeqUB ➔ λ p. tpEqTrans' -tpeqTB -(tpEqSym' -(ρ ● - tpeqUB))
+  } β
+}.
