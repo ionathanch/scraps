@@ -85,4 +85,4 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * Cedille.ced: A cheat sheet for Cedille; see the [wiki page](https://github.com/ionathanch/ionathanch/wiki/Cedille).
 * CastTpEq.ced: The Cast and TpEq constructs used in various Cedille developments, also found in the [core library](https://github.com/cedille/cedille/tree/master/new-lib/core).
 * Mendler: Mendler-style encodings of (weak, strong) induction in Cedille.
-* Injectivity: An old attempt at proving injectivity of constructors in Cedille.
+* Injectivity.ced: An old attempt at proving injectivity of constructors in Cedille.
