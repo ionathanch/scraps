@@ -1,9 +1,8 @@
 {-# OPTIONS --guarded --rewriting #-}
 
-open import Data.Empty
-open import Level renaming (zero to z ; suc to s)
+open import Agda.Primitive
 open import Data.Product hiding (map ; zip)
-open import Relation.Binary.PropositionalEquality.Core
+open import Relation.Binary.PropositionalEquality
 
 {-# BUILTIN REWRITE _≡_ #-}
 
@@ -73,8 +72,8 @@ shuffle _*_ _+_ = fix (λ { _        s t .hd → s .hd * t .hd
                          ; ▹shuffle s t .tl → map2 (zip _+_) (ap2 ▹shuffle (s .tl) (next t))
                                                              (ap2 ▹shuffle (next s) (t .tl)) })
 
-case : ∀ {A} (P : Stream A → Set) → (∀ x xs → ▸ map P xs → P (x ∷ xs)) → ∀ s → P s
-case P ih = fix (λ ▹case s → ih (s .hd) (s .tl) (λ t → ▹case t (s .tl t)))
+caseStream : (P : Stream A → Set) → (∀ x xs → ▸ map P xs → P (x ∷ xs)) → ∀ s → P s
+caseStream P ih = fix (λ ▹case s → ih (s .hd) (s .tl) (λ t → ▹case t (s .tl t)))
 
 {-- NATIVE GUARDED STREAMS --}
 
@@ -94,11 +93,11 @@ lemma : (P : A → Set) {x y : A} (p : x ≡ y) (s : P x) →
         subst P (sym p) (subst P p s) ≡ s
 lemma P refl s = refl
 
-eta : ∀ {A} s → cons {A} (head s) (tail s) ≡ s
+eta : ∀ s → cons {A} (head s) (tail s) ≡ s
 eta (a , s) = cong (a ,_) (lemma ▸_ (pfix _) s)
 
-case' : ∀ {A} (P : Str A → Set) → (∀ x xs → ▸ map P xs → P (cons x xs)) → ∀ s → P s
-case' P ih = fix (λ ▹case (a , s) →
+caseStr : (P : Str A → Set) → (∀ x xs → ▸ map P xs → P (cons x xs)) → ∀ s → P s
+caseStr P ih = fix (λ ▹case (a , s) →
   let s' = subst ▸_ (pfix _) s
       Ps = ih a s' (λ t → ▹case t (s' t))
   in subst P (eta (a , s)) Ps)
@@ -112,7 +111,7 @@ data Nat : Set where
 succ' : Nat → Nat
 succ' n = succ (next n)
 
-indNat : ∀ (P : Nat → Set) → P zero → (∀ (n : ▹ Nat) → ▸ map P n → P (succ n)) → ∀ n → P n
+indNat : (P : Nat → Set) → P zero → (∀ (n : ▹ Nat) → ▸ map P n → P (succ n)) → ∀ n → P n
 indNat P pzero psucc = fix (λ { ▹indNat zero     → pzero
                               ; ▹indNat (succ n) → psucc n (λ t → ▹indNat t (n t)) })
 
@@ -135,6 +134,8 @@ n ∸ m = fix monusFix n m where
 
 {-- WELLFOUNDEDNESS? PRODUCTIVITY? --}
 
+data ⊥ : Set where
+
 data WF : Nat → Set where
   wfzero : WF zero
   wfsucc : ∀ n → ▸ (map WF n) → WF (succ n)
@@ -154,3 +155,68 @@ nwf (wfsucc _ wfconat) rewrite pfix succ = join (λ t → nwf (wfconat t))
 
 ▹false : ▹ ⊥
 ▹false = nwf (wf conat)
+
+{-- COFIXPOINTS OF F ∘ ▸ --}
+
+_∘▸_ : (Set → Set) → ▹ Set → Set
+F ∘▸ X = F (▸ X)
+
+ν_ : (Set → Set) → Set
+ν F = fix (F ∘▸_)
+
+variable F : Set → Set
+postulate fmap : (A → B) → F A → F B
+
+inF : F (▹ ν F) → ν F
+inF {F} f = subst (F ∘▸_) (sym (pfix (F ∘▸_))) f
+
+outF : ν F → F (▹ ν F)
+outF {F} f = subst (F ∘▸_) (pfix (F ∘▸_)) f
+
+inoutF : ∀ x → inF {F} (outF {F} x) ≡ x
+inoutF {F} x = subst-sym-subst {P = F ∘▸_} (pfix (F ∘▸_)) {p = x}
+
+outinF : ∀ x → outF {F} (inF {F} x) ≡ x
+outinF {F} x = subst-subst-sym {P = F ∘▸_} (pfix (F ∘▸_)) {p = x}
+
+coit : (A → F (▹ A)) → A → ν F
+coit {A} {F} f = fix (λ ▹coit a → inF {F} (fmap {F = F} (ap ▹coit) (f a)))
+
+case : (P : ν F → Set) → (∀ t → P (inF {F} t)) → ∀ x → P x
+case {F} P p x = subst P (inoutF {F} x) (p (outF {F} x))
+
+{-- COFIXPOINTS OF POLYNOMIAL FUNCTORS --}
+
+-- Given container A ▹ Q, ℙ A Q is a polynomial functor
+record ℙ (A : Set) (Q : A → Set) (X : Set) : Set where
+  constructor _⟫_
+  field
+    shape : A
+    position : Q shape → X
+open ℙ
+
+variable Q : A → Set
+
+fmapP : (B → C) → ℙ A Q B → ℙ A Q C
+fmapP f p .shape = p .shape
+fmapP f p .position q = f (p .position q)
+
+inP : ℙ A Q (▹ ν (ℙ A Q)) → ν (ℙ A Q)
+inP (a ⟫ p) .shape = a
+inP (a ⟫ p) .position q = subst ▸_ (sym (pfix (ℙ _ _ ∘▸_))) (p q)
+
+outP : ν (ℙ A Q) → ℙ A Q (▹ ν (ℙ A Q))
+outP (a ⟫ p) .shape = a
+outP (a ⟫ p) .position q = subst ▸_ (pfix (ℙ _ _ ∘▸_)) (p q)
+
+inoutP : (p : ν (ℙ A Q)) → inP (outP p) ≡ p
+inoutP {A} {Q} (a ⟫ p) = {!   !}
+
+outinP : (p : ℙ A Q (▹ ν (ℙ A Q))) → outP (inP p) ≡ p
+outinP (a ⟫ p) = {!   !}
+
+coitP : (B → ℙ A Q (▹ B)) → B → ν (ℙ A Q)
+coitP f = fix (λ ▹coit b → inP (fmapP (ap ▹coit) (f b)))
+
+caseP : (P : ν (ℙ A Q) → Set) → (∀ p → P (inP p)) → ∀ p → P p
+caseP P pin p = subst P (inoutP p) (pin (outP p))
