@@ -257,12 +257,12 @@ module coïn (ℓ : Level)
   -- Absolutely no hope of proving this one with fmap, force, comm in the way
   postulate inoutF : ∀ x → inF (outF x) ≡ x
 
-  coitνF : (A → F A) → A → ν F
-  coitνF f a κ = fixκ κ (λ ▹coit a →
+  coit : (A → F A) → A → ν F
+  coit f a κ = fixκ κ (λ ▹coit a →
     inFκ (fmap (λ x → apκ κ ▹coit (nextκ κ x)) (f a))) a
 
-  caseνF : (P : ν F → Set) → (∀ t → P (inF t)) → ∀ x → P x
-  caseνF P p x = subst P (inoutF x) (p (outF x))
+  case : (P : ν F → Set) → (∀ t → P (inF t)) → ∀ x → P x
+  case P p x = subst P (inoutF x) (p (outF x))
 
 {-- COFIXPOINTS OF GUARDED POLYNOMIAL FUNCTORS --
  -- Banished to the bottom of the file because it was distracting --
