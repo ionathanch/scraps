@@ -15,11 +15,14 @@ variable
   ℓ : Level
   A B C : Set ℓ
 
-▹_ : ∀ {ℓ} → Set ℓ → Set ℓ
-▹ A = (@tick x : Tick) → A
+_>0 : ∀ ℓ → Level
+ℓ >0 = lsuc lzero ⊔ ℓ
 
-▸_ : ▹ Set → Set
-▸ A = (@tick x : Tick) → A x
+▹_ : Set ℓ → Set ℓ
+▹ A = (@tick t : Tick) → A
+
+▸_ : ▹ (Set ℓ) → Set ℓ
+▸ A = (@tick t : Tick) → A t
 
 next : A → ▹ A
 next a _ = a
@@ -39,7 +42,6 @@ map2 f a b t = f (a t) (b t)
 postulate
   dfix : (▹ A → A) → ▹ A
   pfix : (f : ▹ A → A) → dfix f ≡ next (f (dfix f))
-  tickext : (a b : ▹ A) → ▸ (λ t → a t ≡ b t) → a ≡ b
 
 fix : (▹ A → A) → A
 fix f = f (dfix f)
@@ -156,36 +158,114 @@ nwf (wfsucc _ wfconat) rewrite pfix succ = join (λ t → nwf (wfconat t))
 ▹false : ▹ ⊥
 ▹false = nwf (wf conat)
 
-{-- COFIXPOINTS OF F ∘ ▸ --}
+{-- COFIXPOINTS OF F ∘ ▸ --
 
-_∘▸_ : (Set → Set) → ▹ Set → Set
+(νF, inF) is a final coälgebra for F ∘ ▹,
+not for F itself:
+
+         coit f
+      A -------> νF
+      |          Λ
+    f |          | inF
+      V          |
+     F ▹A ----> F ▹νF
+    fmap ∘ ap (coit f)
+
+Instead, given an arbitrary functor F,
+we would like to find its cofixpoint.
+------------------------------------------}
+
+_∘▸_ : (Set ℓ → Set ℓ) → ▹ Set ℓ → Set ℓ
 F ∘▸ X = F (▸ X)
 
-ν_ : (Set → Set) → Set
-ν F = fix (F ∘▸_)
+ν′_ : (Set ℓ → Set ℓ) → Set ℓ
+ν′ F = fix (F ∘▸_)
 
-variable F : Set → Set
-postulate fmap : (A → B) → F A → F B
+module grec (F : Set ℓ → Set ℓ)
+            (fmap : ∀ {A B} → (A → B) → F A → F B) where
 
-inF : F (▹ ν F) → ν F
-inF {F} f = subst (F ∘▸_) (sym (pfix (F ∘▸_))) f
+  inF : F (▹ ν′ F) → ν′ F
+  inF f = subst (F ∘▸_) (sym (pfix (F ∘▸_))) f
 
-outF : ν F → F (▹ ν F)
-outF {F} f = subst (F ∘▸_) (pfix (F ∘▸_)) f
+  outF : ν′ F → F (▹ ν′ F)
+  outF f = subst (F ∘▸_) (pfix (F ∘▸_)) f
 
-inoutF : ∀ x → inF {F} (outF {F} x) ≡ x
-inoutF {F} x = subst-sym-subst {P = F ∘▸_} (pfix (F ∘▸_)) {p = x}
+  inoutF : ∀ x → inF (outF x) ≡ x
+  inoutF x = subst-sym-subst {P = F ∘▸_} (pfix (F ∘▸_)) {p = x}
 
-outinF : ∀ x → outF {F} (inF {F} x) ≡ x
-outinF {F} x = subst-subst-sym {P = F ∘▸_} (pfix (F ∘▸_)) {p = x}
+  outinF : ∀ x → outF (inF x) ≡ x
+  outinF x = subst-subst-sym {P = F ∘▸_} (pfix (F ∘▸_)) {p = x}
 
-coit : (A → F (▹ A)) → A → ν F
-coit {A} {F} f = fix (λ ▹coit a → inF {F} (fmap {F = F} (ap ▹coit) (f a)))
+  coit : (A → F (▹ A)) → A → ν′ F
+  coit f = fix (λ ▹coit a → inF (fmap (ap ▹coit) (f a)))
 
-case : (P : ν F → Set) → (∀ t → P (inF {F} t)) → ∀ x → P x
-case {F} P p x = subst P (inoutF {F} x) (p (outF {F} x))
+  case : (P : ν′ F → Set) → (∀ t → P (inF t)) → ∀ x → P x
+  case P p x = subst P (inoutF x) (p (outF x))
 
-{-- COFIXPOINTS OF POLYNOMIAL FUNCTORS --}
+{-- MORE GUARDED PRIMITIVES --}
+
+▹[_] : primLockUniv → Set ℓ → Set ℓ
+▹[ κ ] A = (@tick t : κ) → A
+
+▸[_] : (κ : primLockUniv) → ▹[ κ ] (Set ℓ) → Set ℓ
+▸[ κ ] A = (@tick t : κ) → A t
+
+nextκ : ∀ κ → A → ▹[ κ ] A
+nextκ _ a _ = a
+
+apκ : ∀ κ → ▹[ κ ] (A → B) → ▹[ κ ] A → ▹[ κ ] B
+apκ _ f a t = f t (a t)
+
+postulate
+  -- An unused tick can be forced away
+  force : {A : primLockUniv → Set ℓ} → (∀ κ → ▹[ κ ] (A κ)) → (∀ κ → A κ)
+  -- The usual guarded fixpoint and its unfolding
+  dfixκ : ∀ κ → (▹[ κ ] A → A) → ▹[ κ ] A
+  pfixκ : ∀ κ → (f : ▹[ κ ] A → A) → dfixκ κ f ≡ nextκ κ (f (dfixκ κ f))
+
+fixκ : ∀ κ → (▹[ κ ] A → A) → A
+fixκ κ f = f (dfixκ κ f)
+
+{-- COÏNDUCTION --}
+
+_∘▸[_]_ : (Set ℓ → Set ℓ) → ∀ κ → ▹[ κ ] (Set ℓ) → Set ℓ
+F ∘▸[ κ ] X = F (▸[ κ ] X)
+
+ν[_]_ : ∀ κ → (Set ℓ → Set ℓ) → Set ℓ
+ν[ κ ] F = fixκ κ (F ∘▸[ κ ]_)
+
+module coïn (ℓ : Level)
+            (F : Set (ℓ >0) → Set (ℓ >0))
+            (fmap : ∀ {A B} → (A → B) → F A → F B)
+            (comm : {A : primLockUniv → Set (ℓ >0)} → (∀ κ → F (A κ)) → F (∀ κ → A κ)) where
+
+  ν : (Set (ℓ >0) → Set (ℓ >0)) → Set (ℓ >0)
+  ν F = ∀ κ → ν[ κ ] F
+
+  inFκ : ∀ {κ} → F (▹[ κ ] (ν[ κ ] F)) → ν[ κ ] F
+  inFκ {κ} f = subst (F ∘▸[ κ ]_) (sym (pfixκ κ (F ∘▸[ κ ]_))) f
+
+  outFκ : ∀ {κ} → ν[ κ ] F → F (▹[ κ ] (ν[ κ ] F))
+  outFκ {κ} f = subst (F ∘▸[ κ ]_) (pfixκ κ (F ∘▸[ κ ]_)) f
+
+  inF : F (ν F) → ν F
+  inF f κ = inFκ (fmap (λ g → nextκ κ (g κ)) f)
+
+  outF : ν F → F (ν F)
+  outF f = fmap force (comm (λ κ → outFκ (f κ)))
+
+  -- Absolutely no hope of proving this one with fmap, force, comm in the way
+  postulate inoutF : ∀ x → inF (outF x) ≡ x
+
+  coitνF : (A → F A) → A → ν F
+  coitνF f a κ = fixκ κ (λ ▹coit a →
+    inFκ (fmap (λ x → apκ κ ▹coit (nextκ κ x)) (f a))) a
+
+  caseνF : (P : ν F → Set) → (∀ t → P (inF t)) → ∀ x → P x
+  caseνF P p x = subst P (inoutF x) (p (outF x))
+
+{-- COFIXPOINTS OF GUARDED POLYNOMIAL FUNCTORS --
+ -- Banished to the bottom of the file because it was distracting --
 
 -- Given container A ▹ Q, ℙ A Q is a polynomial functor
 record ℙ (A : Set) (Q : A → Set) (X : Set) : Set where
@@ -201,22 +281,23 @@ fmapP : (B → C) → ℙ A Q B → ℙ A Q C
 fmapP f p .shape = p .shape
 fmapP f p .position q = f (p .position q)
 
-inP : ℙ A Q (▹ ν (ℙ A Q)) → ν (ℙ A Q)
+inP : ℙ A Q (▹ ν′ (ℙ A Q)) → ν′ (ℙ A Q)
 inP (a ⟫ p) .shape = a
 inP (a ⟫ p) .position q = subst ▸_ (sym (pfix (ℙ _ _ ∘▸_))) (p q)
 
-outP : ν (ℙ A Q) → ℙ A Q (▹ ν (ℙ A Q))
+outP : ν′ (ℙ A Q) → ℙ A Q (▹ ν′ (ℙ A Q))
 outP (a ⟫ p) .shape = a
 outP (a ⟫ p) .position q = subst ▸_ (pfix (ℙ _ _ ∘▸_)) (p q)
 
-inoutP : (p : ν (ℙ A Q)) → inP (outP p) ≡ p
+inoutP : (p : ν′ (ℙ A Q)) → inP (outP p) ≡ p
 inoutP {A} {Q} (a ⟫ p) = {!   !}
 
-outinP : (p : ℙ A Q (▹ ν (ℙ A Q))) → outP (inP p) ≡ p
+outinP : (p : ℙ A Q (▹ ν′ (ℙ A Q))) → outP (inP p) ≡ p
 outinP (a ⟫ p) = {!   !}
 
-coitP : (B → ℙ A Q (▹ B)) → B → ν (ℙ A Q)
+coitP : (B → ℙ A Q (▹ B)) → B → ν′ (ℙ A Q)
 coitP f = fix (λ ▹coit b → inP (fmapP (ap ▹coit) (f b)))
 
-caseP : (P : ν (ℙ A Q) → Set) → (∀ p → P (inP p)) → ∀ p → P p
+caseP : (P : ν′ (ℙ A Q) → Set) → (∀ p → P (inP p)) → ∀ p → P p
 caseP P pin p = subst P (inoutP p) (pin (outP p))
+--}
