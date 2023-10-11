@@ -44,6 +44,12 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * DIP.ced: Demonstration that Cedille refutes UIP due to the Kleene trick.
 * ObsEq.agda: An attempt at encoding observational equality à la Tarski as recursion over codes.
 
+## Guarded Types and Coinduction
+* Guardedness.agda: Some examples of coprograms that don't pass productivity checking.
+* Guarded.agda: Some examples using Agda's Guarded Type Theory support.
+* Ticked.agda: Coinductive types à la Clocked Type Theory via Agda's support for guarded types,
+  using a postulated forcing tick which Agda doesn't like :(
+
 ## Programs
 
 * Interlude: A package containing additional definitions for convenience, mostly stolen from Haskell's `base` package.
@@ -81,7 +87,6 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 * Acc.agda: An attempt at formalizing the quicksort example from [this Tweet](https://twitter.com/jonmsterling/status/1444640259552251921)
   originally found in [Modelling General Recursion in Type Theory](http://dx.doi.org/10.1017/S0960129505004822) but failed at Step 3.
 * GenericOrd.agda: An attempt at defining some sort of type-level `Ord` using [Practical Generic Programming](https://jesper.sikanda.be/files/practical-generic-programming.pdf).
-* Guarded.agda: Some examples using Agda's Guarded Type Theory support.
 * Cedille.ced: A cheat sheet for Cedille; see the [wiki page](https://github.com/ionathanch/ionathanch/wiki/Cedille).
 * CastTpEq.ced: The Cast and TpEq constructs used in various Cedille developments, also found in the [core library](https://github.com/cedille/cedille/tree/master/new-lib/core).
 * Mendler: Mendler-style encodings of (weak, strong) induction in Cedille.

@@ -237,7 +237,7 @@ F ∘▸[ κ ] X = F (▸[ κ ] X)
 module coïn (ℓ : Level)
             (F : Set (ℓ >0) → Set (ℓ >0))
             (fmap : ∀ {A B} → (A → B) → F A → F B)
-            (comm : {A : primLockUniv → Set (ℓ >0)} → (∀ κ → F (A κ)) → F (∀ κ → A κ)) where
+            (fcomm : {A : primLockUniv → Set (ℓ >0)} → (∀ κ → F (A κ)) → F (∀ κ → A κ)) where
 
   ν : (Set (ℓ >0) → Set (ℓ >0)) → Set (ℓ >0)
   ν F = ∀ κ → ν[ κ ] F
@@ -252,7 +252,7 @@ module coïn (ℓ : Level)
   inF f κ = inFκ (fmap (λ g → nextκ κ (g κ)) f)
 
   outF : ν F → F (ν F)
-  outF f = fmap force (comm (λ κ → outFκ (f κ)))
+  outF f = fmap force (fcomm (λ κ → outFκ (f κ)))
 
   -- Absolutely no hope of proving this one with fmap, force, comm in the way
   postulate inoutF : ∀ x → inF (outF x) ≡ x
