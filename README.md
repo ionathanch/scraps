@@ -47,7 +47,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Coq files.
 ## Guarded Types and Coinduction
 * Guardedness.agda: Some examples of coprograms that don't pass productivity checking.
 * Guarded.agda: Some examples using Agda's Guarded Type Theory support.
-* Ticked.agda: Coinductive types à la Clocked Type Theory via Agda's support for guarded types,
+* Clocked.agda: Coinductive types à la Clocked Type Theory via Agda's support for guarded types,
   using a postulated forcing tick which Agda doesn't like :(
 
 ## Programs

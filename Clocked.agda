@@ -68,6 +68,7 @@ module coïn (ℓ : Level)
             (fid : ∀ {A} (x : F A) → fmap (λ x → x) x ≡ x)
             (fcomp : ∀ {A B C} (g : B → C) (f : A → B) a → fmap g (fmap f a) ≡ fmap (λ a → g (f a)) a)
             (fcomm : {P : primLockUniv → Set (ℓ >0)} → (∀ κ → F (P κ)) → F (∀ κ → P κ))
+            (fcommκ : ∀ {P} κ f → fmap (λ g → g κ) (fcomm {P} f) ≡ f κ)
             (foldunfold : ∀ {κ} (@tick t : κ) x → fold κ (F ∘▸[ κ ]_) t (unfold κ (F ∘▸[ κ ]_) t x) ≡ x) where
 
   ν : (Set (ℓ >0) → Set (ℓ >0)) → Set (ℓ >0)
@@ -83,9 +84,11 @@ module coïn (ℓ : Level)
   inoutFκ {κ} x =
     let lem = cong (λ f → fmap f x) (funext (λ g → tickext (λ (@tick t) → foldunfold t (g t))))
     in begin
-      inFκ {κ} (outFκ {κ} x) ≡⟨ fcomp _ _ x  ⟩
-      _                      ≡⟨ lem  ⟩
-      fmap (λ y → y) x       ≡⟨ fid x ⟩
+      inFκ (outFκ x)                       ≡⟨ fcomp _ _ x  ⟩
+      fmap (λ z (@tick t) →
+              fold κ (F ∘▸[ κ ]_) t
+                   (unfold κ _ t (z t))) x ≡⟨ lem ⟩
+      fmap (λ x → x) x                     ≡⟨ fid x ⟩
       x ∎
 
   inF : F (ν F) → ν F
@@ -94,12 +97,14 @@ module coïn (ℓ : Level)
   outF : ν F → F (ν F)
   outF f = fmap force (fcomm (λ κ → outFκ (f κ)))
 
-  -- fmap, force, fcomm are supposed to commute with fmap in some way idk
   inoutF : ∀ x → inF (outF x) ≡ x
   inoutF x = funext (λ κ → begin
-    _ ≡⟨ fcomp _ _ (outF x) ⟩
-    _ ≡⟨ {!   !} ⟩
-    _ ∎)
+    inF (outF x) κ                      ≡⟨ fcomp _ _ (outF x) ⟩
+    fmap _ (fmap force (fcomm _))       ≡⟨ fcomp _ force (fcomm _) ⟩
+    fmap _ (fcomm _)                    ≡⟨ sym (fcomp (λ g (@tick t) → fold κ (F ∘▸[ κ ]_) t (g t)) (λ g → g κ) (fcomm _)) ⟩
+    fmap _ (fmap (λ g → g κ) (fcomm _)) ≡⟨ cong (fmap _) (fcommκ κ (λ κ′ → outFκ (x κ′))) ⟩
+    inFκ (outFκ (x κ))                  ≡⟨ inoutFκ (x κ) ⟩
+    x κ ∎)
 
   coit : (A → F A) → A → ν F
   coit f a κ = fix κ (λ ▹coit a →
