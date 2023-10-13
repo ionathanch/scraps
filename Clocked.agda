@@ -106,9 +106,31 @@ module coïn (ℓ : Level)
     inFκ (outFκ (x κ))                  ≡⟨ inoutFκ (x κ) ⟩
     x κ ∎)
 
+  case : (P : ν F → Set) → (∀ t → P (inF t)) → ∀ x → P x
+  case P p x = subst P (inoutF x) (p (outF x))
+
   coit : (A → F A) → A → ν F
   coit f a κ = fix κ (λ ▹coit a →
     inFκ (fmap (λ x → ap κ ▹coit (next κ x)) (f a))) a
 
-  case : (P : ν F → Set) → (∀ t → P (inF t)) → ∀ x → P x
-  case P p x = subst P (inoutF x) (p (outF x))
+  {--------------------
+         coit f
+      A -------> νF
+      |          Λ
+    f |          | inF
+      V          |
+     F A -----> F νF
+      fmap ∘ coit f
+  --------------------}
+  terminal : ∀ f κ (x : A) → inF (fmap (coit f) (f x)) κ ≡ coit f x κ
+  terminal f κ x = cong inFκ (begin
+    _ ≡⟨ fcomp _ _ _ ⟩
+    _ ≡⟨ cong (λ g → fmap g (f x))
+              (funext (λ a →
+                tickext (λ (@tick t) →
+                cong (λ g → g a)
+                     (sym (pdfixt t))))) ⟩
+    _ ∎) where
+    h = λ ▹coit a → inFκ (fmap (λ x → ap κ ▹coit (next κ x)) (f a))
+    postulate pdfixt : (@tick t : κ) → dfix κ h t ≡ h (dfix κ h)
+    -- is this meant to be postulated, with (pdfixt ⋄) computing to refl?
