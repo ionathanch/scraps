@@ -7,10 +7,17 @@ open ≡-Reasoning
 {-# BUILTIN REWRITE _≡_ #-}
 
 primitive primLockUniv : Set₁
+
 variable
   ℓ ℓ′ : Level
-  A B C : Set ℓ
+  A B : Set ℓ
+  C : A → Set ℓ′
   P : primLockUniv → Set ℓ
+
+postulate
+  tickext : {κ : primLockUniv} {Q : κ → Set ℓ} {f g : (@tick t : κ) → Q t} →
+            ((@tick t : κ) → f t ≡ g t) → f ≡ g
+  funext : {f g : (x : A) → C x} → (∀ x → f x ≡ g x) → f ≡ g
 
 _>0 : Level → Level
 ℓ >0 = lsuc lzero ⊔ ℓ
@@ -27,30 +34,36 @@ next _ a _ = a
 ap : ∀ κ → ▹[ κ ] (A → B) → ▹[ κ ] A → ▹[ κ ] B
 ap _ f a t = f t (a t)
 
-postulate
-  @tick ⋄ : {κ : primLockUniv} → κ
-  tickext : {κ : primLockUniv} {A : κ → Set ℓ} {f g : (@tick t : κ) → A t} →
-            ((@tick t : κ) → f t ≡ g t) → f ≡ g
-  funext : {A : Set ℓ} {B : A → Set ℓ′} {f g : (x : A) → B x} →
-           (∀ x → f x ≡ g x) → f ≡ g
-  dfix  : ∀ κ → (▹[ κ ] A → A) → ▹[ κ ] A
-  pdfix : ∀ κ f → dfix {ℓ} {A} κ f ⋄ ≡ f (dfix κ f)
-  unfold  : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → dfix κ F t → F (dfix κ F)
-  fold    : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → F (dfix κ F) → dfix κ F t
-
-{-# REWRITE pdfix #-}
+apd : ∀ κ {A B : (@tick t : κ) → Set ℓ} →
+      ▸[ κ ] (λ (@tick t) → A t → B t) → ▸[ κ ] A → ▸[ κ ] B
+apd _ f a t = f t (a t)
 
 postulate
-  punfold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → unfold κ F ⋄ ≡ λ x → x
-  pfold   : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → fold   κ F ⋄ ≡ λ x → x
-
-{-# REWRITE punfold pfold #-}
+  -- @tick ⋄ : {κ : primLockUniv} → κ
+  dfix : ∀ κ → (▹[ κ ] A → A) → ▹[ κ ] A
+  pfix : ∀ κ f → (@tick t : κ) → dfix {ℓ} {A} κ f t ≡ f (dfix κ f)
+  -- dfix⋄ : ∀ κ f → dfix {ℓ} {A} κ f ⋄ ≡ f (dfix κ f)
+  -- {-# REWRITE dfix⋄ #-}
+  -- pfix⋄ : ∀ κ f → pfix {ℓ} {A} κ f ⋄ ≡ refl
+  -- {-# REWRITE pfix⋄ #-}
 
 fix : ∀ κ → (▹[ κ ] A → A) → A
 fix κ f = f (dfix κ f)
 
 force : (∀ κ → ▹[ κ ] (P κ)) → (∀ κ → P κ)
-force f κ = f κ ⋄
+force f κ = f κ {!   !} -- ⋄
+
+unfold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → dfix κ F t → F (dfix κ F)
+unfold κ F t = subst (λ x → x) (pfix κ F t)
+
+fold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → F (dfix κ F) → dfix κ F t
+fold κ F t = subst (λ x → x) (sym (pfix κ F t))
+
+foldunfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → fold κ F t (unfold κ F t x) ≡ x
+foldunfold {_} {κ} {F} t x = subst-sym-subst (pfix κ F t)
+
+unfoldfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → unfold κ F t (fold κ F t x) ≡ x
+unfoldfold {_} {κ} {F} t x = subst-subst-sym (pfix κ F t)
 
 _∘▸[_]_ : (Set ℓ → Set ℓ) → ∀ κ → ▹[ κ ] (Set ℓ) → Set ℓ
 F ∘▸[ κ ] X = F (▸[ κ ] X)
@@ -70,18 +83,16 @@ module coïn
   (fmapfcomm : ∀ {P} κ f → fmap (λ g → g κ) (fcomm {P} f) ≡ f κ)
   (fcommfmap : ∀ {P} x → fcomm {P} (λ κ → fmap (λ f → f κ) x) ≡ x)
   (fcommute : ∀ {P Q} (f : ∀ κ → P κ → Q κ) x → fcomm {Q} (λ κ → fmap (f κ) (x κ)) ≡ fmap (λ g κ → f κ (g κ)) (fcomm {P} x))
-  -- fold/unfold cancellation
-  (foldunfold : ∀ {κ} (@tick t : κ) x → fold κ (F ∘▸[ κ ]_) t (unfold κ (F ∘▸[ κ ]_) t x) ≡ x)
-  (unfoldfold : ∀ {κ} (@tick t : κ) x → unfold κ (F ∘▸[ κ ]_) t (fold κ (F ∘▸[ κ ]_) t x) ≡ x) where
+  where
 
   ν : (Set (ℓ >0) → Set (ℓ >0)) → Set (ℓ >0)
   ν F = ∀ κ → ν[ κ ] F
 
   inFκ : ∀ {κ} → F (▹[ κ ] (ν[ κ ] F)) → ν[ κ ] F
-  inFκ {κ} f = fmap (λ g (@tick t) → fold κ (F ∘▸[ κ ]_) t (g t)) f
+  inFκ {κ} f = fmap (apd κ (fold κ (F ∘▸[ κ ]_))) f
 
   outFκ : ∀ {κ} → ν[ κ ] F → F (▹[ κ ] (ν[ κ ] F))
-  outFκ {κ} f = fmap (λ g (@tick t) → unfold κ (F ∘▸[ κ ]_) t (g t)) f
+  outFκ {κ} f = fmap (apd κ (unfold κ (F ∘▸[ κ ]_))) f
 
   inoutFκ : ∀ {κ} x → inFκ {κ} (outFκ {κ} x) ≡ x
   inoutFκ {κ} x =
@@ -115,7 +126,7 @@ module coïn
   inoutF x = funext (λ κ → begin
     inF (outF x) κ                      ≡⟨ fcomp _ _ (outF x) ⟩
     fmap _ (fmap force (fcomm _))       ≡⟨ fcomp _ force (fcomm _) ⟩
-    fmap _ (fcomm _)                    ≡⟨ sym (fcomp (λ g (@tick t) → fold κ (F ∘▸[ κ ]_) t (g t)) (λ g → g κ) (fcomm _)) ⟩
+    fmap _ (fcomm _)                    ≡⟨ sym (fcomp (apd κ (fold κ (F ∘▸[ κ ]_))) (λ g → g κ) (fcomm _)) ⟩
     fmap _ (fmap (λ g → g κ) (fcomm _)) ≡⟨ cong (fmap _) (fmapfcomm κ (λ κ′ → outFκ (x κ′))) ⟩
     inFκ (outFκ (x κ))                  ≡⟨ inoutFκ (x κ) ⟩
     x κ ∎)
@@ -154,20 +165,19 @@ module coïn
   ----------------------}
 
   terminal′ : ∀ f κ (x : A) → inF (fmap (coit f) (f x)) κ ≡ coit f x κ
-  terminal′ f κ x = cong inFκ (begin
+  terminal′ f κ x =
+    let h = λ ▹coit a → inFκ (fmap (λ x → ap κ ▹coit (next κ x)) (f a))
+    in cong inFκ (begin
     _ ≡⟨ fcomp _ _ _ ⟩
     _ ≡⟨ cong (λ g → fmap g (f x))
               (funext (λ a →
                 tickext (λ (@tick t) →
                 cong (λ g → g a)
-                     (sym (pdfixt t))))) ⟩
-    _ ∎) where
-    h = λ ▹coit a → inFκ (fmap (λ x → ap κ ▹coit (next κ x)) (f a))
-    postulate pdfixt : (@tick t : κ) → dfix κ h t ≡ h (dfix κ h)
-    -- is this meant to be postulated, with (pdfixt ⋄) computing to refl?
+                     (sym (pfix κ h t))))) ⟩
+    _ ∎)
 
   terminal : ∀ f (x : A) → fmap (coit f) (f x) ≡ outF (coit f x)
   terminal f x = begin
     _ ≡⟨ sym (outinF (fmap (coit f) (f x))) ⟩
     _ ≡⟨ cong outF (funext (λ κ → terminal′ f κ x)) ⟩
-    _ ∎
+    _ ∎ 
