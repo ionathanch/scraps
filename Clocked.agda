@@ -31,12 +31,9 @@ _>0 : Level → Level
 next : ∀ κ → A → ▹[ κ ] A
 next _ a _ = a
 
-ap : ∀ κ → ▹[ κ ] (A → B) → ▹[ κ ] A → ▹[ κ ] B
+ap : ∀ κ {A : (@tick t : κ) → Set ℓ} {B : (@tick t : κ) → A t → Set ℓ′} →
+     ((@tick t : κ) → (x : A t) → B t x) → (a : ▸[ κ ] A) → (@tick t : κ) → B t (a t)
 ap _ f a t = f t (a t)
-
-apd : ∀ κ {A B : (@tick t : κ) → Set ℓ} →
-      ▸[ κ ] (λ (@tick t) → A t → B t) → ▸[ κ ] A → ▸[ κ ] B
-apd _ f a t = f t (a t)
 
 postulate
   -- @tick ⋄ : {κ : primLockUniv} → κ
@@ -89,30 +86,30 @@ module coïn
   ν F = ∀ κ → ν[ κ ] F
 
   inFκ : ∀ {κ} → F (▹[ κ ] (ν[ κ ] F)) → ν[ κ ] F
-  inFκ {κ} f = fmap (apd κ (fold κ (F ∘▸[ κ ]_))) f
+  inFκ {κ} f = fmap (ap κ (fold κ (F ∘▸[ κ ]_))) f
 
   outFκ : ∀ {κ} → ν[ κ ] F → F (▹[ κ ] (ν[ κ ] F))
-  outFκ {κ} f = fmap (apd κ (unfold κ (F ∘▸[ κ ]_))) f
+  outFκ {κ} f = fmap (ap κ (unfold κ (F ∘▸[ κ ]_))) f
 
   inoutFκ : ∀ {κ} x → inFκ {κ} (outFκ {κ} x) ≡ x
   inoutFκ {κ} x =
-    let lem = cong (λ f → fmap f x) (funext (λ g → tickext (λ (@tick t) → foldunfold t (g t))))
+    let lem = funext (λ g → tickext (ap κ foldunfold g))
     in begin
       inFκ (outFκ x)                       ≡⟨ fcomp _ _ x  ⟩
       fmap (λ z (@tick t) →
               fold κ (F ∘▸[ κ ]_) t
-                   (unfold κ _ t (z t))) x ≡⟨ lem ⟩
+                   (unfold κ _ t (z t))) x ≡⟨ cong (λ f → fmap f x) lem ⟩
       fmap (λ x → x) x                     ≡⟨ fid x ⟩
       x ∎
 
   outinFκ : ∀ {κ} x → outFκ {κ} (inFκ {κ} x) ≡ x
   outinFκ {κ} x =
-    let lem = cong (λ f → fmap f x) (funext (λ g → (tickext (λ (@tick t) → unfoldfold t (g t)))))
+    let lem = funext (λ g → (tickext (ap κ unfoldfold g)))
     in begin
       outFκ (inFκ x)                       ≡⟨ fcomp _ _ x ⟩
       fmap (λ z (@tick t) →
               unfold κ (F ∘▸[ κ ]_) t
-                     (fold κ _ t (z t))) x ≡⟨ lem ⟩
+                     (fold κ _ t (z t))) x ≡⟨ cong (λ f → fmap f x) lem ⟩
       fmap (λ x → x) x                     ≡⟨ fid x ⟩
       x ∎
 
@@ -126,7 +123,7 @@ module coïn
   inoutF x = funext (λ κ → begin
     inF (outF x) κ                      ≡⟨ fcomp _ _ (outF x) ⟩
     fmap _ (fmap force (fcomm _))       ≡⟨ fcomp _ force (fcomm _) ⟩
-    fmap _ (fcomm _)                    ≡⟨ sym (fcomp (apd κ (fold κ (F ∘▸[ κ ]_))) (λ g → g κ) (fcomm _)) ⟩
+    fmap _ (fcomm _)                    ≡⟨ sym (fcomp (ap κ (fold κ (F ∘▸[ κ ]_))) (λ g → g κ) (fcomm _)) ⟩
     fmap _ (fmap (λ g → g κ) (fcomm _)) ≡⟨ cong (fmap _) (fmapfcomm κ (λ κ′ → outFκ (x κ′))) ⟩
     inFκ (outFκ (x κ))                  ≡⟨ inoutFκ (x κ) ⟩
     x κ ∎)
@@ -172,8 +169,8 @@ module coïn
     _ ≡⟨ cong (λ g → fmap g (f x))
               (funext (λ a →
                 tickext (λ (@tick t) →
-                cong (λ g → g a)
-                     (sym (pfix κ h t))))) ⟩
+                  cong (λ g → g a)
+                       (sym (pfix κ h t))))) ⟩
     _ ∎)
 
   terminal : ∀ f (x : A) → fmap (coit f) (f x) ≡ outF (coit f x)
