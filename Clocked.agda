@@ -58,18 +58,21 @@ F ∘▸[ κ ] X = F (▸[ κ ] X)
 ν[_]_ : ∀ κ → (Set ℓ → Set ℓ) → Set ℓ
 ν[ κ ] F = fix κ (F ∘▸[ κ ]_)
 
--- We suppose an F such that:
--- * F is a functor
--- * F commutes with clock quantification
--- * η for guarded F holds (bisimilarity?)
-module coïn (ℓ : Level)
-            (F : Set (ℓ >0) → Set (ℓ >0))
-            (fmap : ∀ {A B} → (A → B) → F A → F B)
-            (fid : ∀ {A} (x : F A) → fmap (λ x → x) x ≡ x)
-            (fcomp : ∀ {A B C} (g : B → C) (f : A → B) a → fmap g (fmap f a) ≡ fmap (λ a → g (f a)) a)
-            (fcomm : {P : primLockUniv → Set (ℓ >0)} → (∀ κ → F (P κ)) → F (∀ κ → P κ))
-            (fcommκ : ∀ {P} κ f → fmap (λ g → g κ) (fcomm {P} f) ≡ f κ)
-            (foldunfold : ∀ {κ} (@tick t : κ) x → fold κ (F ∘▸[ κ ]_) t (unfold κ (F ∘▸[ κ ]_) t x) ≡ x) where
+module coïn
+  (ℓ : Level)
+  (F : Set (ℓ >0) → Set (ℓ >0))
+  -- F is a functor and follows functor laws
+  (fmap : ∀ {A B} → (A → B) → F A → F B)
+  (fid : ∀ {A} (x : F A) → fmap (λ x → x) x ≡ x)
+  (fcomp : ∀ {A B C} (g : B → C) (f : A → B) a → fmap g (fmap f a) ≡ fmap (λ a → g (f a)) a)
+  -- F commutes with clock quantification and with fmap
+  (fcomm : {P : primLockUniv → Set (ℓ >0)} → (∀ κ → F (P κ)) → F (∀ κ → P κ))
+  (fmapfcomm : ∀ {P} κ f → fmap (λ g → g κ) (fcomm {P} f) ≡ f κ)
+  (fcommfmap : ∀ {P} x → fcomm {P} (λ κ → fmap (λ f → f κ) x) ≡ x)
+  (fcommute : ∀ {P Q} (f : ∀ κ → P κ → Q κ) x → fcomm {Q} (λ κ → fmap (f κ) (x κ)) ≡ fmap (λ g κ → f κ (g κ)) (fcomm {P} x))
+  -- fold/unfold cancellation
+  (foldunfold : ∀ {κ} (@tick t : κ) x → fold κ (F ∘▸[ κ ]_) t (unfold κ (F ∘▸[ κ ]_) t x) ≡ x)
+  (unfoldfold : ∀ {κ} (@tick t : κ) x → unfold κ (F ∘▸[ κ ]_) t (fold κ (F ∘▸[ κ ]_) t x) ≡ x) where
 
   ν : (Set (ℓ >0) → Set (ℓ >0)) → Set (ℓ >0)
   ν F = ∀ κ → ν[ κ ] F
@@ -91,6 +94,17 @@ module coïn (ℓ : Level)
       fmap (λ x → x) x                     ≡⟨ fid x ⟩
       x ∎
 
+  outinFκ : ∀ {κ} x → outFκ {κ} (inFκ {κ} x) ≡ x
+  outinFκ {κ} x =
+    let lem = cong (λ f → fmap f x) (funext (λ g → (tickext (λ (@tick t) → unfoldfold t (g t)))))
+    in begin
+      outFκ (inFκ x)                       ≡⟨ fcomp _ _ x ⟩
+      fmap (λ z (@tick t) →
+              unfold κ (F ∘▸[ κ ]_) t
+                     (fold κ _ t (z t))) x ≡⟨ lem ⟩
+      fmap (λ x → x) x                     ≡⟨ fid x ⟩
+      x ∎
+
   inF : F (ν F) → ν F
   inF f κ = inFκ (fmap (λ g → next κ (g κ)) f)
 
@@ -102,9 +116,18 @@ module coïn (ℓ : Level)
     inF (outF x) κ                      ≡⟨ fcomp _ _ (outF x) ⟩
     fmap _ (fmap force (fcomm _))       ≡⟨ fcomp _ force (fcomm _) ⟩
     fmap _ (fcomm _)                    ≡⟨ sym (fcomp (λ g (@tick t) → fold κ (F ∘▸[ κ ]_) t (g t)) (λ g → g κ) (fcomm _)) ⟩
-    fmap _ (fmap (λ g → g κ) (fcomm _)) ≡⟨ cong (fmap _) (fcommκ κ (λ κ′ → outFκ (x κ′))) ⟩
+    fmap _ (fmap (λ g → g κ) (fcomm _)) ≡⟨ cong (fmap _) (fmapfcomm κ (λ κ′ → outFκ (x κ′))) ⟩
     inFκ (outFκ (x κ))                  ≡⟨ inoutFκ (x κ) ⟩
     x κ ∎)
+
+  outinF : ∀ x → outF (inF x) ≡ x
+  outinF x = begin
+    outF (inF x)                        ≡⟨ cong (λ x → fmap force (fcomm x)) (funext (λ κ → outinFκ (fmap (λ g → next κ (g κ)) x))) ⟩
+    fmap force (fcomm (λ κ → fmap _ x)) ≡⟨ cong (λ x → fmap force x) (fcommute (λ κ g → next κ (g κ)) (λ _ → x)) ⟩
+    fmap force (fmap _ (fcomm _))       ≡⟨ fcomp _ _ (fcomm (λ _ → x)) ⟩
+    fmap _ (fcomm _)                    ≡⟨ sym (fcommute (λ κ g → g κ) (λ _ → x)) ⟩
+    fcomm (λ κ → fmap (λ g → g κ) x)    ≡⟨ fcommfmap x ⟩
+    x ∎
 
   case : (P : ν F → Set) → (∀ t → P (inF t)) → ∀ x → P x
   case P p x = subst P (inoutF x) (p (outF x))
@@ -113,17 +136,25 @@ module coïn (ℓ : Level)
   coit f a κ = fix κ (λ ▹coit a →
     inFκ (fmap (λ x → ap κ ▹coit (next κ x)) (f a))) a
 
-  {--------------------
+  {----------------------
+  We show that the coalgebra (νF, outF) is terminal
+  by proving that the following square commutes:
+
          coit f
       A -------> νF
-      |          Λ
-    f |          | inF
-      V          |
+      |          |
+    f |          | outF
+      V          V
      F A -----> F νF
-      fmap ∘ coit f
-  --------------------}
-  terminal : ∀ f κ (x : A) → inF (fmap (coit f) (f x)) κ ≡ coit f x κ
-  terminal f κ x = cong inFκ (begin
+      fmap (coit f)
+
+  It seemed easier to first show that
+    inF ∘ fmap (coit f) ∘ f ≡ coit F
+  then outF both sides and use outF ∘ inF cancellation.
+  ----------------------}
+
+  terminal′ : ∀ f κ (x : A) → inF (fmap (coit f) (f x)) κ ≡ coit f x κ
+  terminal′ f κ x = cong inFκ (begin
     _ ≡⟨ fcomp _ _ _ ⟩
     _ ≡⟨ cong (λ g → fmap g (f x))
               (funext (λ a →
@@ -134,3 +165,9 @@ module coïn (ℓ : Level)
     h = λ ▹coit a → inFκ (fmap (λ x → ap κ ▹coit (next κ x)) (f a))
     postulate pdfixt : (@tick t : κ) → dfix κ h t ≡ h (dfix κ h)
     -- is this meant to be postulated, with (pdfixt ⋄) computing to refl?
+
+  terminal : ∀ f (x : A) → fmap (coit f) (f x) ≡ outF (coit f x)
+  terminal f x = begin
+    _ ≡⟨ sym (outinF (fmap (coit f) (f x))) ⟩
+    _ ≡⟨ cong outF (funext (λ κ → terminal′ f κ x)) ⟩
+    _ ∎
