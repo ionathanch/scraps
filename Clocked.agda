@@ -1,4 +1,4 @@
-{-# OPTIONS --guarded --rewriting #-}
+{-# OPTIONS --guarded --rewriting --confluence-check #-}
 
 open import Agda.Primitive
 open import Relation.Binary.PropositionalEquality
@@ -12,7 +12,6 @@ variable
   ℓ ℓ′ : Level
   A B : Set ℓ
   C : A → Set ℓ′
-  P : primLockUniv → Set ℓ
 
 postulate
   tickext : {κ : primLockUniv} {Q : κ → Set ℓ} {f g : (@tick t : κ) → Q t} →
@@ -47,7 +46,7 @@ postulate
 fix : ∀ κ → (▹[ κ ] A → A) → A
 fix κ f = f (dfix κ f)
 
-force : (∀ κ → ▹[ κ ] (P κ)) → (∀ κ → P κ)
+force : ∀ {P : primLockUniv → Set ℓ} → (∀ κ → ▹[ κ ] (P κ)) → (∀ κ → P κ)
 force f κ = f κ {!   !} -- ⋄
 
 unfold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → dfix κ F t → F (dfix κ F)
@@ -177,4 +176,120 @@ module coïn
   terminal f x = begin
     _ ≡⟨ sym (outinF (fmap (coit f) (f x))) ⟩
     _ ≡⟨ cong outF (funext (λ κ → terminal′ f κ x)) ⟩
-    _ ∎ 
+    _ ∎
+
+{---------------------------
+  INSTANCES OF COFIXPOINTS
+      OF SOME FUNCTORS
+---------------------------}
+
+-- Polynomial functors
+record ℙ (S : Set₁) (P : S → Set₁) (X : Set₁) : Set₁ where
+  constructor _⟫_
+  field
+    shape : S
+    position : P shape → X
+open ℙ
+
+-- Principle of induction under a clock
+postulate
+  elim : (S : primLockUniv → Set₁)
+         (P : ∀ κ → S κ → Set₁)
+         (X : primLockUniv → Set₁)
+         (Q : (∀ κ → ℙ (S κ) (P κ) (X κ)) → Set₁) → 
+         ((s : ∀ κ → S κ) (p : ∀ κ → P κ (s κ) → X κ) → Q (λ κ → s κ ⟫ p κ)) →
+         ∀ p → Q p
+  elimred : ∀ S P X Q h s (p : ∀ κ → P κ (s κ) → X κ) → elim S P X Q h (λ κ → s κ ⟫ p κ) ≡ h s p
+{-# REWRITE elimred #-}
+
+module poly
+  (S : Set₁)
+  (P : S → Set₁)
+  (Sκ : (primLockUniv → S) → S)
+  (Pκ : ∀ s → P (Sκ s) → ∀ κ → P (s κ))
+  (Scomm₁ : ∀ κ s → Sκ s ≡ s κ)
+  (Scomm₂ : ∀ s → Sκ (λ κ → s) ≡ s)
+  (Pcomm₁ : ∀ κ s p → Pκ s p κ ≡ subst P (Scomm₁ κ s) p)
+  (Pcomm₂ : ∀ s p → Pκ (λ κ → s) p ≡ λ κ → subst P (Scomm₂ s) p)
+  where
+
+  fmap : (A → B) → ℙ S P A → ℙ S P B
+  fmap f (s ⟫ p) .shape = s
+  fmap f (s ⟫ p) .position x = f (p x)
+
+  fid : ∀ (x : ℙ S P A) → fmap (λ x → x) x ≡ x
+  fid x = refl
+
+  fcomp : ∀ {A B C} (g : B → C) (f : A → B) p → fmap g (fmap f p) ≡ fmap (λ x → g (f x)) p
+  fcomp g f p = refl
+
+  fcomm : {X : primLockUniv → Set₁} → (∀ κ → ℙ S P (X κ)) → ℙ S P (∀ κ → X κ)
+  fcomm {X} p =
+    let s ⟫ f = elim (λ κ → S) (λ κ s → P s) X
+                     (λ _ → ℙ (primLockUniv → S) (λ s → ∀ κ → P (s κ)) (∀ κ → X κ))
+                     (λ s p → s ⟫ λ b κ → p κ (b κ)) p
+    in Sκ s ⟫ λ b → f (Pκ s b)
+
+  fmapfcomm : ∀ {X} κ f → fmap (λ g → g κ) (fcomm {X} f) ≡ f κ
+  fmapfcomm κ f with f κ
+  ... | s ⟫ p = {!   !}
+
+  fcommfmap : ∀ {X} p → fcomm {X} (λ κ → fmap (λ f → f κ) p) ≡ p
+  fcommfmap (s ⟫ p) = {!   !}
+
+  fcommute : ∀ {X Y} (f : ∀ κ → X κ → Y κ) p → fcomm {Y} (λ κ → fmap (f κ) (p κ)) ≡ fmap (λ g κ → f κ (g κ)) (fcomm {X} p)
+  fcommute f p = refl
+
+  open coïn (lsuc lzero) (ℙ S P) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute
+
+-- Stream functors
+record StreamF (D : Set₁) (X : Set₁) : Set₁ where
+  constructor _∷_
+  field
+    hd : D
+    tl : X
+open StreamF
+
+-- Principle of stream induction under a clock
+postulate
+  elimStream :
+    (D : primLockUniv → Set₁)
+    (X : primLockUniv → Set₁)
+    (Q : (∀ κ → StreamF (D κ) (X κ)) → Set₁) → 
+    ((d : ∀ κ → D κ) (x : ∀ κ → X κ) → Q (λ κ → d κ ∷ x κ)) →
+    ∀ s → Q s
+  elimStreamRed : ∀ D X Q h d x → elimStream D X Q h (λ κ → d κ ∷ x κ) ≡ h d x
+{-# REWRITE elimStreamRed #-}
+
+module stream
+  (D : Set₁)
+  (Dκ : (primLockUniv → D) → D)
+  (Dcomm₁ : ∀ κ d → Dκ d ≡ d κ)
+  (Dcomm₂ : ∀ d → Dκ (λ κ → d) ≡ d)
+  where
+
+  fmap : (A → B) → StreamF D A → StreamF D B
+  fmap f s .hd = s .hd
+  fmap f s .tl = f (s .tl)
+
+  fid : ∀ (s : StreamF D A) → fmap (λ x → x) s ≡ s
+  fid s = refl
+
+  fcomp : ∀ {A B C} (g : B → C) (f : A → B) s → fmap g (fmap f s) ≡ fmap (λ x → g (f x)) s
+  fcomp g f s = refl
+
+  fcomm : {X : primLockUniv → Set₁} → (∀ κ → StreamF D (X κ)) → StreamF D (∀ κ → X κ)
+  fcomm {X} s =
+    let d ∷ x = elimStream (λ κ → D) X (λ _ → StreamF (primLockUniv → D) (∀ κ → X κ)) (_∷_) s
+    in Dκ d ∷ x
+
+  fmapfcomm : ∀ {X} κ f → fmap (λ g → g κ) (fcomm {X} f) ≡ f κ
+  fmapfcomm κ f = cong (λ d → d ∷ f κ .tl) (Dcomm₁ κ (λ κ → f κ .hd))
+
+  fcommfmap : ∀ {X} s → fcomm {X} (λ κ → fmap (λ f → f κ) s) ≡ s
+  fcommfmap s = cong (λ d → d ∷ s .tl) (Dcomm₂ (s .hd))
+
+  fcommute : ∀ {X Y} (f : ∀ κ → X κ → Y κ) s → fcomm {Y} (λ κ → fmap (f κ) (s κ)) ≡ fmap (λ g κ → f κ (g κ)) (fcomm {X} s)
+  fcommute f s = refl
+
+  open coïn (lsuc lzero) (StreamF D) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute
