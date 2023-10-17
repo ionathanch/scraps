@@ -17,6 +17,8 @@ postulate
   tickext : {κ : primLockUniv} {Q : κ → Set ℓ} {f g : (@tick t : κ) → Q t} →
             ((@tick t : κ) → f t ≡ g t) → f ≡ g
   funext : {f g : (x : A) → C x} → (∀ x → f x ≡ g x) → f ≡ g
+  funextRefl : {f : (x : A) → C x} → funext {f = f} {g = f} (λ x → refl) ≡ refl
+  {-# REWRITE funextRefl #-}
 
 _>0 : Level → Level
 ℓ >0 = lsuc lzero ⊔ ℓ
@@ -42,24 +44,21 @@ postulate
   -- {-# REWRITE dfix⋄ #-}
   -- pfix⋄ : ∀ κ f → pfix {ℓ} {A} κ f ⋄ ≡ refl
   -- {-# REWRITE pfix⋄ #-}
+  unfold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → dfix κ F t → F (dfix κ F)
+  -- unfold κ F t = subst (λ x → x) (pfix κ F t)
+  fold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → F (dfix κ F) → dfix κ F t
+  -- fold κ F t = subst (λ x → x) (sym (pfix κ F t))
+  foldunfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → fold κ F t (unfold κ F t x) ≡ x
+  -- foldunfold {_} {κ} {F} t x = subst-sym-subst (pfix κ F t)
+  unfoldfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → unfold κ F t (fold κ F t x) ≡ x
+  -- unfoldfold {_} {κ} {F} t x = subst-subst-sym (pfix κ F t)
+  {-# REWRITE unfoldfold foldunfold #-}
 
 fix : ∀ κ → (▹[ κ ] A → A) → A
 fix κ f = f (dfix κ f)
 
 force : ∀ {P : primLockUniv → Set ℓ} → (∀ κ → ▹[ κ ] (P κ)) → (∀ κ → P κ)
 force f κ = f κ {!   !} -- ⋄
-
-unfold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → dfix κ F t → F (dfix κ F)
-unfold κ F t = subst (λ x → x) (pfix κ F t)
-
-fold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → F (dfix κ F) → dfix κ F t
-fold κ F t = subst (λ x → x) (sym (pfix κ F t))
-
-foldunfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → fold κ F t (unfold κ F t x) ≡ x
-foldunfold {_} {κ} {F} t x = subst-sym-subst (pfix κ F t)
-
-unfoldfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → unfold κ F t (fold κ F t x) ≡ x
-unfoldfold {_} {κ} {F} t x = subst-subst-sym (pfix κ F t)
 
 _∘▸[_]_ : (Set ℓ → Set ℓ) → ∀ κ → ▹[ κ ] (Set ℓ) → Set ℓ
 F ∘▸[ κ ] X = F (▸[ κ ] X)
@@ -92,23 +91,23 @@ module coïn
 
   inoutFκ : ∀ {κ} x → inFκ {κ} (outFκ {κ} x) ≡ x
   inoutFκ {κ} x =
-    let lem = funext (λ g → tickext (ap κ foldunfold g))
+    let lem = funext (λ g → tickext (ap κ (foldunfold {F = F ∘▸[ κ ]_}) g))
     in begin
       inFκ (outFκ x)                       ≡⟨ fcomp _ _ x  ⟩
       fmap (λ z (@tick t) →
               fold κ (F ∘▸[ κ ]_) t
-                   (unfold κ _ t (z t))) x ≡⟨ cong (λ f → fmap f x) lem ⟩
+                   (unfold κ _ t (z t))) x ≡⟨⟩ -- cong (λ f → fmap f x) lem
       fmap (λ x → x) x                     ≡⟨ fid x ⟩
       x ∎
 
   outinFκ : ∀ {κ} x → outFκ {κ} (inFκ {κ} x) ≡ x
   outinFκ {κ} x =
-    let lem = funext (λ g → (tickext (ap κ unfoldfold g)))
+    let lem = funext (λ g → (tickext (ap κ (unfoldfold {F = F ∘▸[ κ ]_}) g)))
     in begin
       outFκ (inFκ x)                       ≡⟨ fcomp _ _ x ⟩
       fmap (λ z (@tick t) →
               unfold κ (F ∘▸[ κ ]_) t
-                     (fold κ _ t (z t))) x ≡⟨ cong (λ f → fmap f x) lem ⟩
+                     (fold κ _ t (z t))) x ≡⟨⟩ -- cong (λ f → fmap f x) lem
       fmap (λ x → x) x                     ≡⟨ fid x ⟩
       x ∎
 
@@ -231,16 +230,15 @@ module poly
     in Sκ s ⟫ λ b → f (Pκ s b)
 
   fmapfcomm : ∀ {X} κ f → fmap (λ g → g κ) (fcomm {X} f) ≡ f κ
-  fmapfcomm κ f with f κ
-  ... | s ⟫ p = {!   !}
+  fmapfcomm κ f = {!   !}
 
   fcommfmap : ∀ {X} p → fcomm {X} (λ κ → fmap (λ f → f κ) p) ≡ p
-  fcommfmap (s ⟫ p) = {!   !}
+  fcommfmap p = {!   !}
 
   fcommute : ∀ {X Y} (f : ∀ κ → X κ → Y κ) p → fcomm {Y} (λ κ → fmap (f κ) (p κ)) ≡ fmap (λ g κ → f κ (g κ)) (fcomm {X} p)
   fcommute f p = refl
 
-  open coïn (lsuc lzero) (ℙ S P) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute
+  open coïn (lsuc lzero) (ℙ S P) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute public
 
 -- Stream functors
 record StreamF (D : Set₁) (X : Set₁) : Set₁ where
@@ -292,4 +290,32 @@ module stream
   fcommute : ∀ {X Y} (f : ∀ κ → X κ → Y κ) s → fcomm {Y} (λ κ → fmap (f κ) (s κ)) ≡ fmap (λ g κ → f κ (g κ)) (fcomm {X} s)
   fcommute f s = refl
 
-  open coïn (lsuc lzero) (StreamF D) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute
+  open coïn (lsuc lzero) (StreamF D) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute public
+
+-- Naturals
+data ℕ : Set₁ where
+  zero : ℕ
+  succ : ℕ → ℕ
+
+-- Induction on naturals under a clock
+postulate
+  elimℕ : (Q : (primLockUniv → ℕ) → Set₁) → Q (λ κ → zero) → ((n : ∀ κ → ℕ) → Q n → Q (λ κ → succ (n κ))) → ∀ n → Q n
+  elimℕz : ∀ Q qz qs → elimℕ Q qz qs (λ κ → zero) ≡ qz
+  elimℕs : ∀ Q qz qs n → elimℕ Q qz qs (λ κ → succ (n κ)) ≡ qs n (elimℕ Q qz qs n)
+  {-# REWRITE elimℕz elimℕs #-}
+
+ℕκ : (primLockUniv → ℕ) → ℕ
+ℕκ = elimℕ (λ _ → ℕ) zero (λ _ → succ)
+
+ℕcomm₁ : ∀ κ n → ℕκ n ≡ n κ
+ℕcomm₁ κ = elimℕ (λ n → ℕκ n ≡ n κ) refl (λ _ q → cong succ q)
+
+ℕcomm₂ : ∀ n → ℕκ (λ κ → n) ≡ n
+ℕcomm₂ zero = refl
+ℕcomm₂ (succ n) = cong succ (ℕcomm₂ n)
+
+open stream ℕ ℕκ ℕcomm₁ ℕcomm₂ public
+
+-- why won't it compute
+caseIn : ∀ P p t → case P p (inF t) ≡ p t
+caseIn P p t = {!   !}
