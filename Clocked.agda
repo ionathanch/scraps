@@ -182,6 +182,7 @@ module coïn
       OF SOME FUNCTORS
 ---------------------------}
 
+-- Compute along clock irrelevance
 postulate
   κ₀ : primLockUniv
   punκ : ∀ {κ₁ κ₂} (x : primLockUniv → A) → x κ₁ ≡ x κ₂
@@ -297,27 +298,3 @@ module stream (D : Set₁) where
 
   caseIn : ∀ P p t → case P p (inF t) ≡ p t
   caseIn P p t = {! refl !}
-
--- Naturals
-data ℕ : Set₁ where
-  zero : ℕ
-  succ : ℕ → ℕ
-
--- Induction on naturals under a clock
-postulate
-  elimℕ : (Q : (primLockUniv → ℕ) → Set₁) → Q (λ κ → zero) → ((n : ∀ κ → ℕ) → Q n → Q (λ κ → succ (n κ))) → ∀ n → Q n
-  elimℕz : ∀ Q qz qs → elimℕ Q qz qs (λ κ → zero) ≡ qz
-  elimℕs : ∀ Q qz qs n → elimℕ Q qz qs (λ κ → succ (n κ)) ≡ qs n (elimℕ Q qz qs n)
-  {-# REWRITE elimℕz elimℕs #-}
-
-ℕκ : (primLockUniv → ℕ) → ℕ
-ℕκ = elimℕ (λ _ → ℕ) zero (λ _ → succ)
-
-ℕcomm₁ : ∀ κ n → ℕκ n ≡ n κ
-ℕcomm₁ κ = elimℕ (λ n → ℕκ n ≡ n κ) refl (λ _ q → cong succ q)
-
-ℕcomm₂ : ∀ n → ℕκ (λ κ → n) ≡ n
-ℕcomm₂ zero = refl
-ℕcomm₂ (succ n) = cong succ (ℕcomm₂ n)
-
-open stream ℕ public
