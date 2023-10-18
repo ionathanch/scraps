@@ -182,6 +182,19 @@ module coïn
       OF SOME FUNCTORS
 ---------------------------}
 
+-- 🆕 A computing clock irrelevance axiom
+postulate
+  -- unquantifying over κlocks
+  unκ : (primLockUniv → A) → A
+  -- propositional equality for unκ
+  punκ : ∀ κ x → unκ {ℓ} {A} x ≡ x κ
+  -- definitional equality for unκ
+  dunκ : ∀ x → unκ {ℓ} {A} (λ κ → x) ≡ x
+  {-# REWRITE dunκ #-}
+  -- coherence of punκ with dunκ
+  cunκ : ∀ κ x → punκ {ℓ} {A} κ (λ κ → x) ≡ refl
+  {-# REWRITE cunκ #-}
+
 -- Polynomial functors
 record ℙ (S : Set₁) (P : S → Set₁) (X : Set₁) : Set₁ where
   constructor _⟫_
@@ -201,17 +214,7 @@ postulate
   elimred : ∀ S P X Q h s (p : ∀ κ → P κ (s κ) → X κ) → elim S P X Q h (λ κ → s κ ⟫ p κ) ≡ h s p
 {-# REWRITE elimred #-}
 
-module poly
-  (S : Set₁)
-  (P : S → Set₁)
-  (Sκ : (primLockUniv → S) → S)
-  (Pκ : ∀ s → P (Sκ s) → ∀ κ → P (s κ))
-  (Scomm₁ : ∀ κ s → Sκ s ≡ s κ)
-  (Scomm₂ : ∀ s → Sκ (λ κ → s) ≡ s)
-  (Pcomm₁ : ∀ κ s p → Pκ s p κ ≡ subst P (Scomm₁ κ s) p)
-  (Pcomm₂ : ∀ s p → Pκ (λ κ → s) p ≡ λ κ → subst P (Scomm₂ s) p)
-  where
-
+module poly (S : Set₁) (P : S → Set₁) where
   fmap : (A → B) → ℙ S P A → ℙ S P B
   fmap f (s ⟫ p) .shape = s
   fmap f (s ⟫ p) .position x = f (p x)
@@ -227,18 +230,26 @@ module poly
     let s ⟫ f = elim (λ κ → S) (λ κ s → P s) X
                      (λ _ → ℙ (primLockUniv → S) (λ s → ∀ κ → P (s κ)) (∀ κ → X κ))
                      (λ s p → s ⟫ λ b κ → p κ (b κ)) p
-    in Sκ s ⟫ λ b → f (Pκ s b)
+    in unκ s ⟫ λ b → f (λ κ → subst P (punκ κ s) b)
 
   fmapfcomm : ∀ {X} κ f → fmap (λ g → g κ) (fcomm {X} f) ≡ f κ
   fmapfcomm κ f = {!   !}
 
   fcommfmap : ∀ {X} p → fcomm {X} (λ κ → fmap (λ f → f κ) p) ≡ p
-  fcommfmap p = {!   !}
+  fcommfmap p = refl
 
   fcommute : ∀ {X Y} (f : ∀ κ → X κ → Y κ) p → fcomm {Y} (λ κ → fmap (f κ) (p κ)) ≡ fmap (λ g κ → f κ (g κ)) (fcomm {X} p)
   fcommute f p = refl
 
   open coïn (lsuc lzero) (ℙ S P) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute public
+
+  -- outF ∘ inF now computes!
+  outinF′ : ∀ x → outF (inF x) ≡ x
+  outinF′ x = refl
+
+  -- this is stuck on `force` not computing properly
+  caseIn : ∀ P p t → case P p (inF t) ≡ p t
+  caseIn P p t = {! refl !}
 
 -- Stream functors
 record StreamF (D : Set₁) (X : Set₁) : Set₁ where
@@ -259,13 +270,7 @@ postulate
   elimStreamRed : ∀ D X Q h d x → elimStream D X Q h (λ κ → d κ ∷ x κ) ≡ h d x
 {-# REWRITE elimStreamRed #-}
 
-module stream
-  (D : Set₁)
-  (Dκ : (primLockUniv → D) → D)
-  (Dcomm₁ : ∀ κ d → Dκ d ≡ d κ)
-  (Dcomm₂ : ∀ d → Dκ (λ κ → d) ≡ d)
-  where
-
+module stream (D : Set₁) where
   fmap : (A → B) → StreamF D A → StreamF D B
   fmap f s .hd = s .hd
   fmap f s .tl = f (s .tl)
@@ -279,13 +284,13 @@ module stream
   fcomm : {X : primLockUniv → Set₁} → (∀ κ → StreamF D (X κ)) → StreamF D (∀ κ → X κ)
   fcomm {X} s =
     let d ∷ x = elimStream (λ κ → D) X (λ _ → StreamF (primLockUniv → D) (∀ κ → X κ)) (_∷_) s
-    in Dκ d ∷ x
+    in unκ d ∷ x
 
   fmapfcomm : ∀ {X} κ f → fmap (λ g → g κ) (fcomm {X} f) ≡ f κ
-  fmapfcomm κ f = cong (λ d → d ∷ f κ .tl) (Dcomm₁ κ (λ κ → f κ .hd))
+  fmapfcomm κ f = cong (λ d → d ∷ f κ .tl) (punκ κ (λ κ → f κ .hd))
 
   fcommfmap : ∀ {X} s → fcomm {X} (λ κ → fmap (λ f → f κ) s) ≡ s
-  fcommfmap s = cong (λ d → d ∷ s .tl) (Dcomm₂ (s .hd))
+  fcommfmap s = refl
 
   fcommute : ∀ {X Y} (f : ∀ κ → X κ → Y κ) s → fcomm {Y} (λ κ → fmap (f κ) (s κ)) ≡ fmap (λ g κ → f κ (g κ)) (fcomm {X} s)
   fcommute f s = refl
@@ -314,8 +319,4 @@ postulate
 ℕcomm₂ zero = refl
 ℕcomm₂ (succ n) = cong succ (ℕcomm₂ n)
 
-open stream ℕ ℕκ ℕcomm₁ ℕcomm₂ public
-
--- why won't it compute
-caseIn : ∀ P p t → case P p (inF t) ≡ p t
-caseIn P p t = {!   !}
+open stream ℕ public
