@@ -1,4 +1,4 @@
-{-# OPTIONS --guarded --rewriting --confluence-check #-}
+{-# OPTIONS --guarded --rewriting --confluence-check --without-K #-}
 
 open import Agda.Primitive
 open import Relation.Binary.PropositionalEquality
@@ -227,7 +227,7 @@ module poly (S : Set₁) (P : S → Set₁) where
     in s κ₀ ⟫ λ b → f (λ κ → subst P (punκ s) b)
 
   fmapfcomm : ∀ {X} κ f → fmap (λ g → g κ) (fcomm {X} f) ≡ f κ
-  fmapfcomm {X} κ f = (ℙeq (f κ .position) (punκ (λ κ′ → shape (f κ′)))) where
+  fmapfcomm {X} κ f = ℙeq (f κ .position) (punκ (λ κ′ → f κ′ .shape)) where
     ℙeq : ∀ {s₁ s₂} (f : P s₂ → X κ) → (p : s₁ ≡ s₂) → (s₁ ⟫ λ b → f (subst P p b)) ≡ (s₂ ⟫ f)
     ℙeq _ refl = refl
 
