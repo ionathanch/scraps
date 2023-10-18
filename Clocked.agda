@@ -155,7 +155,7 @@ module coïn
       fmap (coit f)
 
   It seemed easier to first show that
-    inF ∘ fmap (coit f) ∘ f ≡ coit F
+    inF ∘ fmap (coit f) ∘ f ≡ coit f
   then outF both sides and use outF ∘ inF cancellation.
   ----------------------}
 
@@ -182,17 +182,10 @@ module coïn
       OF SOME FUNCTORS
 ---------------------------}
 
--- 🆕 A computing clock irrelevance axiom
 postulate
-  -- unquantifying over κlocks
-  unκ : (primLockUniv → A) → A
-  -- propositional equality for unκ
-  punκ : ∀ κ x → unκ {ℓ} {A} x ≡ x κ
-  -- definitional equality for unκ
-  dunκ : ∀ x → unκ {ℓ} {A} (λ κ → x) ≡ x
-  {-# REWRITE dunκ #-}
-  -- coherence of punκ with dunκ
-  cunκ : ∀ κ x → punκ {ℓ} {A} κ (λ κ → x) ≡ refl
+  κ₀ : primLockUniv
+  punκ : ∀ {κ₁ κ₂} (x : primLockUniv → A) → x κ₁ ≡ x κ₂
+  cunκ : ∀ {κ₁ κ₂} x → punκ {ℓ} {A} {κ₁} {κ₂} (λ κ → x) ≡ refl
   {-# REWRITE cunκ #-}
 
 -- Polynomial functors
@@ -230,7 +223,7 @@ module poly (S : Set₁) (P : S → Set₁) where
     let s ⟫ f = elim (λ κ → S) (λ κ s → P s) X
                      (λ _ → ℙ (primLockUniv → S) (λ s → ∀ κ → P (s κ)) (∀ κ → X κ))
                      (λ s p → s ⟫ λ b κ → p κ (b κ)) p
-    in unκ s ⟫ λ b → f (λ κ → subst P (punκ κ s) b)
+    in s κ₀ ⟫ λ b → f (λ κ → subst P (punκ s) b)
 
   fmapfcomm : ∀ {X} κ f → fmap (λ g → g κ) (fcomm {X} f) ≡ f κ
   fmapfcomm κ f = {!   !}
@@ -284,10 +277,10 @@ module stream (D : Set₁) where
   fcomm : {X : primLockUniv → Set₁} → (∀ κ → StreamF D (X κ)) → StreamF D (∀ κ → X κ)
   fcomm {X} s =
     let d ∷ x = elimStream (λ κ → D) X (λ _ → StreamF (primLockUniv → D) (∀ κ → X κ)) (_∷_) s
-    in unκ d ∷ x
+    in d κ₀ ∷ x
 
   fmapfcomm : ∀ {X} κ f → fmap (λ g → g κ) (fcomm {X} f) ≡ f κ
-  fmapfcomm κ f = cong (λ d → d ∷ f κ .tl) (punκ κ (λ κ → f κ .hd))
+  fmapfcomm κ f = cong (λ d → d ∷ f κ .tl) (punκ (λ κ → f κ .hd))
 
   fcommfmap : ∀ {X} s → fcomm {X} (λ κ → fmap (λ f → f κ) s) ≡ s
   fcommfmap s = refl
@@ -296,6 +289,12 @@ module stream (D : Set₁) where
   fcommute f s = refl
 
   open coïn (lsuc lzero) (StreamF D) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute public
+
+  outinF′ : ∀ x → outF (inF x) ≡ x
+  outinF′ x = refl
+
+  caseIn : ∀ P p t → case P p (inF t) ≡ p t
+  caseIn P p t = {! refl !}
 
 -- Naturals
 data ℕ : Set₁ where
