@@ -298,3 +298,25 @@ module stream (D : Set₁) where
 
   caseIn : ∀ P p t → case P p (inF t) ≡ p t
   caseIn P p t = {! refl !}
+
+  Stream : Set₁
+  Stream = ν (StreamF D)
+
+  module shuffle (_+_ : D → D → D) (_*_ : D → D → D) where
+    zipF : ∀ κ → ν[ κ ] (StreamF D) → ν[ κ ] (StreamF D) → ν[ κ ] (StreamF D)
+    zipF κ = fix κ
+      (λ { ▹zipF r s .hd → r .hd + s .hd
+         ; ▹zipF r s .tl t →
+            let rtl = outFκ r .tl t
+                stl = outFκ s .tl t
+            in fold κ _ t (▹zipF t rtl stl)})
+  
+    shuffle : Stream → Stream → Stream
+    shuffle r s κ = fix κ (λ ▹shuffle r s →
+      let rhd ∷ rtl = outF r
+          shd ∷ stl = outF s
+          hd = rhd * shd
+          tl = λ (@tick t) →
+            fold κ _ t (zipF κ (▹shuffle t rtl s)
+                               (▹shuffle t r stl))
+      in hd ∷ tl) r s
