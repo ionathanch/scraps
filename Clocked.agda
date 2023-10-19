@@ -117,6 +117,10 @@ module coïn
   outF : ν F → F (ν F)
   outF f = fmap force (fcomm (λ κ → outFκ (f κ)))
 
+  coitκ : ∀ κ → (A → F (▹[ κ ] A)) → A → ν[ κ ] F
+  coitκ κ f a = fix κ (λ ▹coit a →
+    inFκ (fmap (λ x → ap κ ▹coit x) (f a))) a
+
   inoutF : ∀ x → inF (outF x) ≡ x
   inoutF x = funext (λ κ → begin
     inF (outF x) κ                      ≡⟨ fcomp _ _ (outF x) ⟩
@@ -306,20 +310,21 @@ module stream (D : Set₁) where
   Streamκ κ = ν[ κ ] (StreamF D)
 
   module shuffle (_+_ : D → D → D) (_*_ : D → D → D) where
-    zipF : ∀ κ → Streamκ κ → Streamκ κ → Streamκ κ
-    zipF κ = fix κ
-      (λ { ▹zipF r s .hd → r .hd + s .hd
-         ; ▹zipF r s .tl t →
-            let rtl = outFκ r .tl t
-                stl = outFκ s .tl t
-            in fold κ _ t (▹zipF t rtl stl)})
+    open import Data.Product
+
+    map2 : ∀ κ → (A → A → B) → ▹[ κ ] A → ▹[ κ ] A → ▹[ κ ] B
+    map2 κ f a₁ a₂ t = f (a₁ t) (a₂ t)
+
+    zipF : ∀ κ → Streamκ κ × Streamκ κ → Streamκ κ
+    zipF κ = coitκ κ (λ (r , s) →
+      let rhd ∷ rtl = outFκ r
+          shd ∷ stl = outFκ s
+      in (rhd + shd) ∷ map2 κ _,_ rtl stl)
   
     shuffle : Stream → Stream → Stream
     shuffle r s κ = fix κ (λ ▹shuffle r s →
       let rhd ∷ rtl = outF r
           shd ∷ stl = outF s
-          hd = rhd * shd
           tl = λ (@tick t) →
-            fold κ _ t (zipF κ (▹shuffle t rtl s)
-                               (▹shuffle t r stl))
-      in hd ∷ tl) r s
+            fold κ _ t (zipF κ (▹shuffle t rtl s , ▹shuffle t r stl))
+      in (rhd * shd) ∷ tl) r s
