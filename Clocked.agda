@@ -302,8 +302,11 @@ module stream (D : Set₁) where
   Stream : Set₁
   Stream = ν (StreamF D)
 
+  Streamκ : primLockUniv → Set₁
+  Streamκ κ = ν[ κ ] (StreamF D)
+
   module shuffle (_+_ : D → D → D) (_*_ : D → D → D) where
-    zipF : ∀ κ → ν[ κ ] (StreamF D) → ν[ κ ] (StreamF D) → ν[ κ ] (StreamF D)
+    zipF : ∀ κ → Streamκ κ → Streamκ κ → Streamκ κ
     zipF κ = fix κ
       (λ { ▹zipF r s .hd → r .hd + s .hd
          ; ▹zipF r s .tl t →
