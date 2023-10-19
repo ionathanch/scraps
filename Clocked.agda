@@ -310,7 +310,10 @@ module stream (D : Set₁) where
   Streamκ κ = ν[ κ ] (StreamF D)
 
   module shuffle (_+_ : D → D → D) (_*_ : D → D → D) where
-    open import Data.Product
+    open import Data.Product hiding (map)
+
+    map : ∀ κ → (A → B) → ▹[ κ ] A → ▹[ κ ] B
+    map κ f a t = f (a t)
 
     map2 : ∀ κ → (A → A → B) → ▹[ κ ] A → ▹[ κ ] A → ▹[ κ ] B
     map2 κ f a₁ a₂ t = f (a₁ t) (a₂ t)
@@ -325,5 +328,4 @@ module stream (D : Set₁) where
     shuffle r s κ = fix κ (λ ▹shuffle r s →
       let rhd ∷ rtl = outF r
           shd ∷ stl = outF s
-          tl = λ (@tick t) → zipF κ (▹shuffle t rtl s , ▹shuffle t r stl)
-      in inFκ ((rhd * shd) ∷ tl)) r s
+      in inFκ ((rhd * shd) ∷ map κ (λ f → zipF κ (f rtl s , f r stl)) ▹shuffle)) r s
