@@ -325,6 +325,5 @@ module stream (D : Set₁) where
     shuffle r s κ = fix κ (λ ▹shuffle r s →
       let rhd ∷ rtl = outF r
           shd ∷ stl = outF s
-          tl = λ (@tick t) →
-            fold κ _ t (zipF κ (▹shuffle t rtl s , ▹shuffle t r stl))
-      in (rhd * shd) ∷ tl) r s
+          tl = λ (@tick t) → zipF κ (▹shuffle t rtl s , ▹shuffle t r stl)
+      in inFκ ((rhd * shd) ∷ tl)) r s
