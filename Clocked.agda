@@ -14,11 +14,10 @@ variable
   C : A → Set ℓ′
 
 postulate
+  tickirr : {κ : primLockUniv} {f : κ → A} → (@tick t u : κ) → f t ≡ f u
   tickext : {κ : primLockUniv} {Q : κ → Set ℓ} {f g : (@tick t : κ) → Q t} →
             ((@tick t : κ) → f t ≡ g t) → f ≡ g
   funext : {f g : (x : A) → C x} → (∀ x → f x ≡ g x) → f ≡ g
-  funextRefl : {f : (x : A) → C x} → funext {f = f} {g = f} (λ x → refl) ≡ refl
-  {-# REWRITE funextRefl #-}
 
 _>0 : Level → Level
 ℓ >0 = lsuc lzero ⊔ ℓ
@@ -58,7 +57,10 @@ fix : ∀ κ → (▹[ κ ] A → A) → A
 fix κ f = f (dfix κ f)
 
 force : ∀ {P : primLockUniv → Set ℓ} → (∀ κ → ▹[ κ ] (P κ)) → (∀ κ → P κ)
-force f κ = f κ {!   !} -- ⋄
+force f κ = f κ {! ⋄ !}
+
+nextforce : ∀ {P} f κ → next κ (force {ℓ} {P} f κ) ≡ f κ
+nextforce f κ = tickext (tickirr {f = f κ} {! ⋄ !})
 
 _∘▸[_]_ : (Set ℓ → Set ℓ) → ∀ κ → ▹[ κ ] (Set ℓ) → Set ℓ
 F ∘▸[ κ ] X = F (▸[ κ ] X)
@@ -125,6 +127,10 @@ module coïn
   inoutF x = funext (λ κ → begin
     inF (outF x) κ                      ≡⟨ fcomp _ _ (outF x) ⟩
     fmap _ (fmap force (fcomm _))       ≡⟨ fcomp _ force (fcomm _) ⟩
+    fmap _ (fcomm _)                    ≡⟨ cong (λ g → fmap g (fcomm (λ κ → outFκ (x κ))))
+                                            (funext (λ f →
+                                              cong (ap κ (fold κ (F ∘▸[ κ ]_)))
+                                                   (nextforce f κ))) ⟩
     fmap _ (fcomm _)                    ≡⟨ sym (fcomp (ap κ (fold κ (F ∘▸[ κ ]_))) (λ g → g κ) (fcomm _)) ⟩
     fmap _ (fmap (λ g → g κ) (fcomm _)) ≡⟨ cong (fmap _) (fmapfcomm κ (λ κ′ → outFκ (x κ′))) ⟩
     inFκ (outFκ (x κ))                  ≡⟨ inoutFκ (x κ) ⟩
@@ -163,22 +169,22 @@ module coïn
   then outF both sides and use outF ∘ inF cancellation.
   ----------------------}
 
-  terminal′ : ∀ f κ (x : A) → inF (fmap (coit f) (f x)) κ ≡ coit f x κ
+  terminal′ : ∀ f κ (x : A) → coit f x κ ≡ inF (fmap (coit f) (f x)) κ
   terminal′ f κ x =
     let h = λ ▹coit a → inFκ (fmap (λ x → ap κ ▹coit (next κ x)) (f a))
     in cong inFκ (begin
-    _ ≡⟨ fcomp _ _ _ ⟩
     _ ≡⟨ cong (λ g → fmap g (f x))
               (funext (λ a →
                 tickext (λ (@tick t) →
                   cong (λ g → g a)
-                       (sym (pfix κ h t))))) ⟩
+                       (pfix κ h t)))) ⟩
+    _ ≡⟨ sym (fcomp _ _ _) ⟩
     _ ∎)
 
-  terminal : ∀ f (x : A) → fmap (coit f) (f x) ≡ outF (coit f x)
+  terminal : ∀ f (x : A) → outF (coit f x) ≡ fmap (coit f) (f x)
   terminal f x = begin
-    _ ≡⟨ sym (outinF (fmap (coit f) (f x))) ⟩
     _ ≡⟨ cong outF (funext (λ κ → terminal′ f κ x)) ⟩
+    _ ≡⟨ outinF (fmap (coit f) (f x)) ⟩
     _ ∎
 
 {---------------------------
@@ -248,6 +254,11 @@ module poly (S : Set₁) (P : S → Set₁) where
   outinF′ x = refl
 
   -- this is stuck on `force` not computing properly
+  terminal′′ : ∀ g (x : A) → outF (coit g x) ≡ fmap (coit g) (g x)
+  terminal′′ g x = {! refl !}
+
+  -- this is stuck on `subst P q (p t)` not computing to `p t`
+  -- even when `q : p t ≡ p t`
   caseIn : ∀ P p t → case P p (inF t) ≡ p t
   caseIn P p t = {! refl !}
 
@@ -299,6 +310,9 @@ module stream (D : Set₁) where
 
   outinF′ : ∀ x → outF (inF x) ≡ x
   outinF′ x = refl
+
+  terminal′′ : ∀ g (x : A) → outF (coit g x) ≡ fmap (coit g) (g x)
+  terminal′′ g x = {! refl !}
 
   caseIn : ∀ P p t → case P p (inF t) ≡ p t
   caseIn P p t = {! refl !}
