@@ -1,4 +1,4 @@
-{-# OPTIONS --guarded --rewriting --confluence-check --without-K #-}
+{-# OPTIONS --guarded --rewriting --confluence-check --with-K #-}
 
 open import Agda.Primitive
 open import Relation.Binary.PropositionalEquality
@@ -18,9 +18,10 @@ postulate
   tickext : {κ : primLockUniv} {Q : κ → Set ℓ} {f g : (@tick t : κ) → Q t} →
             ((@tick t : κ) → f t ≡ g t) → f ≡ g
   funext : {f g : (x : A) → C x} → (∀ x → f x ≡ g x) → f ≡ g
-  funextRefl : (f : (x : A) → C x) (p : ∀ x → f x ≡ f x) →
-               funext {f = f} {g = f} p ≡ refl
-  {-# REWRITE funextRefl #-}
+
+funextRefl : ∀ {f : (x : A) → C x} p → funext {f = f} {g = f} p ≡ refl
+funextRefl p with refl <- funext p = refl
+{-# REWRITE funextRefl #-}
 
 _>0 : Level → Level
 ℓ >0 = lsuc lzero ⊔ ℓ
@@ -39,13 +40,19 @@ ap : ∀ κ {A : (@tick t : κ) → Set ℓ} {B : (@tick t : κ) → A t → Set
 ap _ f a t = f t (a t)
 
 postulate
+  -- ⋄ : {κ : primLockUniv} → κ
   dfix : ∀ κ → (▹[ κ ] A → A) → ▹[ κ ] A
   pfix : ∀ κ f → (@tick t : κ) → dfix {ℓ} {A} κ f t ≡ f (dfix κ f)
-  -- @tick ⋄ : {κ : primLockUniv} → κ
-  -- dfix⋄ : ∀ κ f → dfix {ℓ} {A} κ f ⋄ ≡ f (dfix κ f)
-  -- {-# REWRITE dfix⋄ #-}
-  -- pfix⋄ : ∀ κ f → pfix {ℓ} {A} κ f ⋄ ≡ refl
-  -- {-# REWRITE pfix⋄ #-}
+
+{-
+dfix⋄ : ∀ κ f → dfix {ℓ} {A} κ f ⋄ ≡ f (dfix κ f)
+dfix⋄ κ f = pfix κ f ⋄
+{-# REWRITE dfix⋄ #-}
+
+pfix⋄ : ∀ κ f → pfix {ℓ} {A} κ f ⋄ ≡ refl
+pfix⋄ κ f with refl <- pfix κ f ⋄ = refl
+{-# REWRITE pfix⋄ #-}
+-}
 
 unfold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → dfix κ F t → F (dfix κ F)
 unfold κ F t = subst (λ x → x) (pfix κ F t)
@@ -200,8 +207,10 @@ module coïn
 postulate
   κ₀ : primLockUniv
   punκ : ∀ {κ₁ κ₂} (x : primLockUniv → A) → x κ₁ ≡ x κ₂
-  cunκ : ∀ {κ₁ κ₂} x → punκ {ℓ} {A} {κ₁} {κ₂} (λ κ → x) ≡ refl
-  {-# REWRITE cunκ #-}
+
+cunκ : ∀ κ₁ κ₂ (x : A) → punκ {κ₁ = κ₁} {κ₂ = κ₂} (λ κ → x) ≡ refl
+cunκ κ₁ κ₂ x with refl <- punκ {κ₁ = κ₁} {κ₂ = κ₂} (λ κ → x) = refl
+{-# REWRITE cunκ #-}
 
 -- Polynomial functors
 record ℙ (S : Set₁) (P : S → Set₁) (X : Set₁) : Set₁ where
