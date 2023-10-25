@@ -18,6 +18,9 @@ postulate
   tickext : {κ : primLockUniv} {Q : κ → Set ℓ} {f g : (@tick t : κ) → Q t} →
             ((@tick t : κ) → f t ≡ g t) → f ≡ g
   funext : {f g : (x : A) → C x} → (∀ x → f x ≡ g x) → f ≡ g
+  funextRefl : (f : (x : A) → C x) (p : ∀ x → f x ≡ f x) →
+               funext {f = f} {g = f} (λ x → p x) ≡ refl
+  {-# REWRITE funextRefl #-}
 
 _>0 : Level → Level
 ℓ >0 = lsuc lzero ⊔ ℓ
@@ -43,24 +46,24 @@ postulate
   -- {-# REWRITE dfix⋄ #-}
   -- pfix⋄ : ∀ κ f → pfix {ℓ} {A} κ f ⋄ ≡ refl
   -- {-# REWRITE pfix⋄ #-}
-  unfold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → dfix κ F t → F (dfix κ F)
-  -- unfold κ F t = subst (λ x → x) (pfix κ F t)
-  fold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → F (dfix κ F) → dfix κ F t
-  -- fold κ F t = subst (λ x → x) (sym (pfix κ F t))
-  foldunfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → fold κ F t (unfold κ F t x) ≡ x
-  -- foldunfold {_} {κ} {F} t x = subst-sym-subst (pfix κ F t)
-  unfoldfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → unfold κ F t (fold κ F t x) ≡ x
-  -- unfoldfold {_} {κ} {F} t x = subst-subst-sym (pfix κ F t)
-  {-# REWRITE unfoldfold foldunfold #-}
+
+unfold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → dfix κ F t → F (dfix κ F)
+unfold κ F t = subst (λ x → x) (pfix κ F t)
+
+fold : ∀ κ → (F : ▹[ κ ] (Set ℓ) → Set ℓ) → (@tick t : κ) → F (dfix κ F) → dfix κ F t
+fold κ F t = subst (λ x → x) (sym (pfix κ F t))
+
+foldunfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → fold κ F t (unfold κ F t x) ≡ x
+foldunfold {ℓ} {κ} {F} t x = subst-sym-subst (pfix κ F t)
+
+unfoldfold : ∀ {κ} {F : ▹[ κ ] (Set ℓ) → Set ℓ} (@tick t : κ) x → unfold κ F t (fold κ F t x) ≡ x
+unfoldfold {ℓ} {κ} {F} t x = subst-subst-sym (pfix κ F t)
 
 fix : ∀ κ → (▹[ κ ] A → A) → A
 fix κ f = f (dfix κ f)
 
 force : ∀ {P : primLockUniv → Set ℓ} → (∀ κ → ▹[ κ ] (P κ)) → (∀ κ → P κ)
 force f κ = f κ {! ⋄ !}
-
-nextforce : ∀ {P} f κ → next κ (force {ℓ} {P} f κ) ≡ f κ
-nextforce f κ = tickext (tickirr {f = f κ} {! ⋄ !})
 
 _∘▸[_]_ : (Set ℓ → Set ℓ) → ∀ κ → ▹[ κ ] (Set ℓ) → Set ℓ
 F ∘▸[ κ ] X = F (▸[ κ ] X)
@@ -98,7 +101,7 @@ module coïn
       inFκ (outFκ x)                       ≡⟨ fcomp _ _ x  ⟩
       fmap (λ z (@tick t) →
               fold κ (F ∘▸[ κ ]_) t
-                   (unfold κ _ t (z t))) x ≡⟨⟩ -- cong (λ f → fmap f x) lem
+                   (unfold κ _ t (z t))) x ≡⟨ cong (λ f → fmap f x) lem ⟩
       fmap (λ x → x) x                     ≡⟨ fid x ⟩
       x ∎
 
@@ -109,7 +112,7 @@ module coïn
       outFκ (inFκ x)                       ≡⟨ fcomp _ _ x ⟩
       fmap (λ z (@tick t) →
               unfold κ (F ∘▸[ κ ]_) t
-                     (fold κ _ t (z t))) x ≡⟨⟩ -- cong (λ f → fmap f x) lem
+                     (fold κ _ t (z t))) x ≡⟨ cong (λ f → fmap f x) lem ⟩
       fmap (λ x → x) x                     ≡⟨ fid x ⟩
       x ∎
 
@@ -129,8 +132,9 @@ module coïn
     fmap _ (fmap force (fcomm _))       ≡⟨ fcomp _ force (fcomm _) ⟩
     fmap _ (fcomm _)                    ≡⟨ cong (λ g → fmap g (fcomm (λ κ → outFκ (x κ))))
                                             (funext (λ f →
-                                              cong (ap κ (fold κ (F ∘▸[ κ ]_)))
-                                                   (nextforce f κ))) ⟩
+                                              (tickext (λ (@tick t) →
+                                                cong (fold κ (F ∘▸[ κ ]_) t)
+                                                     (tickirr {f = f κ} {! ⋄ !} t))))) ⟩
     fmap _ (fcomm _)                    ≡⟨ sym (fcomp (ap κ (fold κ (F ∘▸[ κ ]_))) (λ g → g κ) (fcomm _)) ⟩
     fmap _ (fmap (λ g → g κ) (fcomm _)) ≡⟨ cong (fmap _) (fmapfcomm κ (λ κ′ → outFκ (x κ′))) ⟩
     inFκ (outFκ (x κ))                  ≡⟨ inoutFκ (x κ) ⟩
@@ -249,16 +253,15 @@ module poly (S : Set₁) (P : S → Set₁) where
 
   open coïn (lsuc lzero) (ℙ S P) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute public
 
-  -- outF ∘ inF now computes!
-  outinF′ : ∀ x → outF (inF x) ≡ x
-  outinF′ x = refl
+  -- The below three proofs don't compute to `refl`
+  -- because they are blocked on the missing tick in `force`
 
-  -- this is stuck on `force` not computing properly
+  outinF′ : ∀ x → outF (inF x) ≡ x
+  outinF′ x = {! refl !}
+
   terminal′′ : ∀ g (x : A) → outF (coit g x) ≡ fmap (coit g) (g x)
   terminal′′ g x = {! refl !}
 
-  -- this is stuck on `subst P q (p t)` not computing to `p t`
-  -- even when `q : p t ≡ p t`
   caseIn : ∀ P p t → case P p (inF t) ≡ p t
   caseIn P p t = {! refl !}
 
@@ -309,7 +312,7 @@ module stream (D : Set₁) where
   open coïn (lsuc lzero) (StreamF D) fmap fid fcomp fcomm fmapfcomm fcommfmap fcommute public
 
   outinF′ : ∀ x → outF (inF x) ≡ x
-  outinF′ x = refl
+  outinF′ x = {! refl !}
 
   terminal′′ : ∀ g (x : A) → outF (coit g x) ≡ fmap (coit g) (g x)
   terminal′′ g x = {! refl !}
