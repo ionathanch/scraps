@@ -19,7 +19,7 @@ postulate
             ((@tick t : κ) → f t ≡ g t) → f ≡ g
   funext : {f g : (x : A) → C x} → (∀ x → f x ≡ g x) → f ≡ g
   funextRefl : (f : (x : A) → C x) (p : ∀ x → f x ≡ f x) →
-               funext {f = f} {g = f} (λ x → p x) ≡ refl
+               funext {f = f} {g = f} p ≡ refl
   {-# REWRITE funextRefl #-}
 
 _>0 : Level → Level
@@ -39,9 +39,9 @@ ap : ∀ κ {A : (@tick t : κ) → Set ℓ} {B : (@tick t : κ) → A t → Set
 ap _ f a t = f t (a t)
 
 postulate
-  -- @tick ⋄ : {κ : primLockUniv} → κ
   dfix : ∀ κ → (▹[ κ ] A → A) → ▹[ κ ] A
   pfix : ∀ κ f → (@tick t : κ) → dfix {ℓ} {A} κ f t ≡ f (dfix κ f)
+  -- @tick ⋄ : {κ : primLockUniv} → κ
   -- dfix⋄ : ∀ κ f → dfix {ℓ} {A} κ f ⋄ ≡ f (dfix κ f)
   -- {-# REWRITE dfix⋄ #-}
   -- pfix⋄ : ∀ κ f → pfix {ℓ} {A} κ f ⋄ ≡ refl
