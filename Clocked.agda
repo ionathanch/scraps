@@ -134,7 +134,7 @@ module coïn
                                             (funext (λ f →
                                               (tickext (λ (@tick t) →
                                                 cong (fold κ (F ∘▸[ κ ]_) t)
-                                                     (tickirr {f = f κ} {! ⋄ !} t))))) ⟩
+                                                     (tickirr {f = f κ} _ t))))) ⟩
     fmap _ (fcomm _)                    ≡⟨ sym (fcomp (ap κ (fold κ (F ∘▸[ κ ]_))) (λ g → g κ) (fcomm _)) ⟩
     fmap _ (fmap (λ g → g κ) (fcomm _)) ≡⟨ cong (fmap _) (fmapfcomm κ (λ κ′ → outFκ (x κ′))) ⟩
     inFκ (outFκ (x κ))                  ≡⟨ inoutFκ (x κ) ⟩
@@ -224,8 +224,7 @@ postulate
 
 module poly (S : Set₁) (P : S → Set₁) where
   fmap : (A → B) → ℙ S P A → ℙ S P B
-  fmap f (s ⟫ p) .shape = s
-  fmap f (s ⟫ p) .position x = f (p x)
+  fmap f (s ⟫ p) = s ⟫ λ x → f (p x)
 
   fid : ∀ (x : ℙ S P A) → fmap (λ x → x) x ≡ x
   fid x = refl
@@ -286,8 +285,7 @@ postulate
 
 module stream (D : Set₁) where
   fmap : (A → B) → StreamF D A → StreamF D B
-  fmap f s .hd = s .hd
-  fmap f s .tl = f (s .tl)
+  fmap f (hd ∷ tl) = hd ∷ f tl
 
   fid : ∀ (s : StreamF D A) → fmap (λ x → x) s ≡ s
   fid s = refl
