@@ -2,6 +2,7 @@
 **/MAlonzo
 *.agdai
 .cedille/
+.vscode/
 dist-newstyle/
 \#*\#
 .\#*
