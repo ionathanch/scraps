@@ -4,8 +4,7 @@ data ⊥ : Set where
 data U : Set where
   u : (X : Set) → (X → U) → U
 
-{-# NO_UNIVERSE_CHECK #-}
-data WF : U → Set where
+data WF : U → Set₁ where
   wf : ∀ (X : Set) (f : X → U) → (∀ x → WF (f x)) → WF (u X f)
 
 loop : U
