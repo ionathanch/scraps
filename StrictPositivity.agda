@@ -36,14 +36,8 @@ P₀ x = Σ[ P ∈ ℘ Bad ] x ≡ f P × ¬ (P x)
 x₀ : Bad
 x₀ = f P₀
 
-P₀x₀→¬P₀x₀ : P₀ x₀ → ¬ P₀ x₀
-P₀x₀→¬P₀x₀ (P , x₀≡fP , ¬Px₀) P₀x₀ = ¬Px₀ (subst (λ P → P x₀) (fInj x₀≡fP) P₀x₀)
-
-¬P₀x₀→P₀x₀ : ¬ P₀ x₀ → P₀ x₀
-¬P₀x₀→P₀x₀ ¬P₀x₀ = P₀ , refl , ¬P₀x₀
-
 ¬P₀x₀ : ¬ P₀ x₀
-¬P₀x₀ P₀x₀ = P₀x₀→¬P₀x₀ P₀x₀ P₀x₀
+¬P₀x₀ P₀x₀@(P , x₀≡fP , ¬Px₀) with refl ← fInj x₀≡fP = ¬Px₀ P₀x₀
 
 false : ⊥
-false = ¬P₀x₀ (¬P₀x₀→P₀x₀ ¬P₀x₀)
+false = ¬P₀x₀ (P₀ , refl , ¬P₀x₀)
