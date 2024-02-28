@@ -17,11 +17,13 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Rocq files
 
 ## Inconsistencies
 
-* Girard.idr: An "implementation" of Girard's paradox relying on Type: Type.
+* Hurkens.idr: An "implementation" of Hurkens' paradox relying on Type: Type.
   As Idris 2 currently does not have cumulative universes yet, type checking this file will *not* terminate!
-* Girard.agda: Another "implementation" of Girard's paradox, but instead of just using the `--type-in-type` flag,
+* HurkensLower.agda: Another "implementation" of Hurkens' paradox, but instead of just using the `--type-in-type` flag,
   it uses an impredicative record with unrestricted elimination implemented using rewrite rules.
   Type checking with this implementation does terminate, but with the flag set and the actual record does not.
+* Hurkens.agda, Hurkens.v: Yet another "implementation" of Hurkens' paradox,
+  using universe polymorphism to try to get it to type check as far as possible.
 * Berardi.agda: An adaptation of the inconsistency arising from impredicativity, AoC, and EM from
   [Proof-irrelevance out of excluded-middle and choice in the calculus of constructions](https://doi.org/10.1017/S0956796800001829).
 * StrictPositivity.idr: An adaptation of [this proof](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/)
