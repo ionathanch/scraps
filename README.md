@@ -80,6 +80,9 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Rocq files
 * Universes.lagda.md: Various ways to model a universe hierarchy.
 * StraTT.agda: A model of the universes of stratified type theory with explicit universe levels.
   The actual structures for the types are excluded because working with accessibility predicates is too messy.
+* SystemF.agda: A reproduction of the model (i.e. interpreter) of Stratified System F from
+  [Towards Tagless Interpretation of System F](https://icfp23.sigplan.org/details/tyde-2023/12/),
+  extended with a parametricity theorem.
 
 ## Miscellaneous Proofs
 
