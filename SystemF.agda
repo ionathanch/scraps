@@ -4,6 +4,7 @@ open import Agda.Primitive using (Setω ; Level ; _⊔_ ; lzero ; lsuc)
 open import Relation.Binary.PropositionalEquality
   using (_≡_ ; refl ; sym ; trans ; cong ; cong₂ ; module ≡-Reasoning)
   renaming (subst to transp ; subst₂ to transp₂)
+open import Data.Product
 open ≡-Reasoning
 
 {-# BUILTIN REWRITE _≡_ #-}
@@ -15,14 +16,20 @@ infix 20 _∈′_
 infix 30 ↑_
 
 {--------------------------------
-Why doesn't the stdlib have this?
+Some helpful standard definitions
 --------------------------------}
+
+id : ∀ {ℓ} {A : Set ℓ} → A → A
+id x = x
 
 coe : ∀ {ℓ} {A B : Set ℓ} → A ≡ B → A → B
 coe refl x = x
 
 coe-β : ∀ {ℓ} {A B : Set ℓ} (p : A ≡ B) x → coe (sym p) (coe p x) ≡ x
 coe-β refl x = refl
+
+_↔_ : ∀ {ℓ} → Set ℓ → Set ℓ → Set ℓ
+A ↔ B = (A → B) × (B → A)
 
 {-----------------------------------------------
 A separate equality type is needed to talk about
@@ -198,6 +205,8 @@ The interpretation of a well formed Type in context Δ at level ℓ
 using a mapping η is a type in Set ℓ.
 
 Some helpful lemmas are needed:
+* ⟦ext⟧′ says the interpretations of a Type
+  under pointwise equal environments are equal;
 * ⟦ren⟧′ says the intepretation of a Type
   is the same as that of the same type renamed
   with the environment precomposed with that renaming;
@@ -222,38 +231,79 @@ cons η A (there where?) = η where?
 ⟦ A ⇒ B ⟧′ η = (⟦ A ⟧′ η) → (⟦ B ⟧′ η)
 ⟦ ∀′ ℓ B ⟧′ η = (A : Set ℓ) → (⟦ B ⟧′ (cons η A))
 
+⟦ext⟧′ : ∀ {Δ ℓ} (η₁ η₂ : TEnv Δ) →
+         (∀ {ℓ} (where? : ℓ ∈′ Δ) → _↔_ {ℓ} (η₁ where?) (η₂ where?)) →
+         (A : Type Δ ℓ) → _↔_ {ℓ} (⟦ A ⟧′ η₁) (⟦ A ⟧′ η₂)
+⟦ext⟧′ η₁ η₂ h (var where?) = h where?
+⟦ext⟧′ η₁ η₂ h (A ⇒ B) =
+  let la , ra = ⟦ext⟧′ η₁ η₂ h A
+      lb , rb = ⟦ext⟧′ η₁ η₂ h B
+  in (λ f a → lb (f (ra a))) , (λ f a → rb (f (la a)))
+⟦ext⟧′ η₁ η₂ h (∀′ ℓ B) =
+  (λ f A →
+    let lA , rA = ⟦ext⟧′ (cons {ℓ = ℓ} η₁ A) (cons {ℓ = ℓ} η₂ A)
+                         (λ { here → (λ a → a) , (λ a → a)
+                            ; (there where?) → h where? }) B
+    in lA (f A)) ,
+  (λ f A →
+    let lA , rA = ⟦ext⟧′ (cons {ℓ = ℓ} η₁ A) (cons {ℓ = ℓ} η₂ A)
+                         (λ { here → (λ a → a) , (λ a → a)
+                            ; (there where?) → h where? }) B
+    in rA (f A))
+
 ⟦ren⟧′ : ∀ {Δ Δ' ℓ} (η₁ : TEnv Δ) (η₂ : TEnv Δ') (ξ : Ren Δ Δ')
          (h : ∀ {ℓ} → (where? : ℓ ∈′ Δ) → η₁ where? ≡ η₂ (ξ where?))
-         (B : Type Δ ℓ) → ⟦ B ⟧′ η₁ ≡ ⟦ rename ξ B ⟧′ η₂
-⟦ren⟧′ η₁ η₂ ξ h (var where?) = h where?
-⟦ren⟧′ η₁ η₂ ξ h (A ⇒ B) = cong₂ (λ A B → A → B) (⟦ren⟧′ η₁ η₂ ξ h A) (⟦ren⟧′ η₁ η₂ ξ h B)
+         (B : Type Δ ℓ) → ⟦ B ⟧′ η₁ ↔ ⟦ rename ξ B ⟧′ η₂
+⟦ren⟧′ η₁ η₂ ξ h (var where?) = coe (h where?) , coe (sym (h where?))
+⟦ren⟧′ η₁ η₂ ξ h (A ⇒ B) =
+  let la , ra = ⟦ren⟧′ η₁ η₂ ξ h A
+      lb , rb = ⟦ren⟧′ η₁ η₂ ξ h B
+  in (λ f a → lb (f (ra a))) , (λ f a → rb (f (la a)))
 ⟦ren⟧′ η₁ η₂ ξ h (∀′ ℓ B) =
-  piext refl (λ A →
-    ⟦ren⟧′ (cons {ℓ = ℓ} η₁ A)
-         (cons {ℓ = ℓ} η₂ A)
-         (lift ξ)
-         (λ {here → refl ; (there where?) → h where?}) B)
+  (λ f A →
+    let lA , rA = ⟦ren⟧′ (cons {ℓ = ℓ} η₁ A) (cons {ℓ = ℓ} η₂ A) (lift ξ)
+                         (λ {here → refl ; (there where?) → h where?}) B
+    in lA (f A)) ,
+  (λ f A →
+    let lA , rA = ⟦ren⟧′ (cons {ℓ = ℓ} η₁ A) (cons {ℓ = ℓ} η₂ A) (lift ξ)
+                         (λ {here → refl ; (there where?) → h where?}) B
+    in rA (f A))
 
-⟦wk⟧′ : ∀ {Δ ℓ ℓ'} (η : TEnv Δ) (A : Set ℓ') (B : Type Δ ℓ) → ⟦ B ⟧′ η ≡ ⟦ weaken B ⟧′ (cons η A)
+⟦wk⟧′ : ∀ {Δ ℓ ℓ'} (η : TEnv Δ) (A : Set ℓ') (B : Type Δ ℓ) → ⟦ B ⟧′ η ↔ ⟦ weaken B ⟧′ (cons η A)
 ⟦wk⟧′ η A B = ⟦ren⟧′ η (cons η A) there (λ _ → refl) B
 
 ⟦subst⟧′ : ∀ {Δ Δ' ℓ} (η : TEnv Δ') (σ : Subst Δ Δ') (B : Type Δ ℓ) →
-           ⟦ B ⟧′ (λ where? → ⟦ σ where? ⟧′ η) ≡ ⟦ subst σ B ⟧′ η
-⟦subst⟧′ η σ (var where?) = refl
-⟦subst⟧′ η σ (A ⇒ B) = cong₂ (λ A B → A → B) (⟦subst⟧′ η σ A) (⟦subst⟧′ η σ B)
-⟦subst⟧′ η σ (∀′ ℓ {ℓ'} B) = piext {lsuc ℓ} {ℓ'} refl (λ A →
-  trans (cong⁺ (⟦ B ⟧′) (ifunext⁺ {lzero} (funext⁺ {lzero}
-          (λ { here → refl
-             ; (there where?) → ≡→≡⁺ (⟦wk⟧′ η A (σ where?)) }))))
-        (⟦subst⟧′ (cons {ℓ = ℓ} η A) (↑ σ) B))
+           ⟦ B ⟧′ (λ where? → ⟦ σ where? ⟧′ η) ↔ ⟦ subst σ B ⟧′ η
+⟦subst⟧′ η σ (var where?) = id , id
+⟦subst⟧′ η σ (A ⇒ B) =
+  let la , ra = ⟦subst⟧′ η σ A
+      lb , rb = ⟦subst⟧′ η σ B
+  in (λ f a → lb (f (ra a))) , (λ f a → rb (f (la a)))
+⟦subst⟧′ η σ (∀′ ℓ {ℓ'} B) =
+  (λ f A →
+    let lA , rA = ⟦subst⟧′ (cons {ℓ = ℓ} η A) (↑ σ) B
+        lB , rB = ⟦ext⟧′ (cons {ℓ = ℓ} (λ where? → ⟦ σ where? ⟧′ η) A)
+                         (λ where? → ⟦ (↑ σ) where? ⟧′ (cons {ℓ = ℓ} η A))
+                         (λ { here → id , id
+                            ; (there where?) → ⟦wk⟧′ η A (σ where?) }) B
+    in lA (lB (f A))) ,
+  (λ f A →
+    let lA , rA = ⟦subst⟧′ (cons {ℓ = ℓ} η A) (↑ σ) B
+        lB , rB = ⟦ext⟧′ (cons {ℓ = ℓ} (λ where? → ⟦ σ where? ⟧′ η) A)
+                         (λ where? → ⟦ (↑ σ) where? ⟧′ (cons {ℓ = ℓ} η A))
+                         (λ { here → id , id
+                            ; (there where?) → ⟦wk⟧′ η A (σ where?) }) B
+    in rB (rA (f A)))
 
 ⟦subst₁⟧′ : ∀ {Δ ℓ ℓ'} (η : TEnv Δ) (A : Type Δ ℓ) (B : Type (Δ ∷ ℓ) ℓ') →
-            ⟦ B ⟧′ (cons η (⟦ A ⟧′ η)) ≡ ⟦ subst₁ B A ⟧′ η
-⟦subst₁⟧′ η A B =
-  trans (cong⁺ (⟦ B ⟧′) (ifunext⁺ {lzero} (funext⁺ {lzero}
-          (λ { here → refl
-             ; (there _) → refl }))))
-        (⟦subst⟧′ η (consT var A) B)
+            ⟦ B ⟧′ (cons η (⟦ A ⟧′ η)) ↔ ⟦ subst₁ B A ⟧′ η
+⟦subst₁⟧′ {ℓ = ℓ} η A B =
+  let lsubst₁ , rsubst₁ = ⟦subst⟧′ η (consT var A) B
+      lb , rb = ⟦ext⟧′ (cons {ℓ = ℓ} η (⟦ A ⟧′ η))
+                       (λ where? → ⟦ consT var A where? ⟧′ η)
+                       (λ { here → id , id
+                          ; (there where?) → id , id }) B
+  in (λ b → lsubst₁ (lb b)) , (λ b → rb (rsubst₁ b))
 
 {----------------------------------------------------------------------
 Let's now consider the interpretation of Terms as Agda terms.
@@ -273,14 +323,14 @@ extend δ a here = a
 extend δ a (there where?) = δ where?
 
 extend′ : ∀ {Δ Γ ℓ} (η : TEnv Δ) → Env Γ η → (A : Set ℓ) → Env (Γ ∷′ ℓ) (cons η A)
-extend′ η δ A (tskip B where?) = coe (⟦wk⟧′ η A B) (δ where?)
+extend′ η δ A (tskip B where?) = proj₁ (⟦wk⟧′ η A B) (δ where?)
 
 ⟦_⟧ : ∀ {Δ Γ ℓ A} → Term Δ Γ {ℓ} A → (η : TEnv Δ) → Env Γ η → ⟦ A ⟧′ η
 ⟦ var where? ⟧ η δ = δ where?
 ⟦ λ′ b ⟧ η δ = λ a → ⟦ b ⟧ η (extend δ a)
 ⟦ $′ b a ⟧ η δ = ⟦ b ⟧ η δ (⟦ a ⟧ η δ)
 ⟦ Λ {ℓ} b ⟧ η δ = λ A → ⟦ b ⟧ (cons η A) (extend′ {ℓ = ℓ} η δ A)
-⟦ $ {B = B} b A ⟧ η δ = coe (⟦subst₁⟧′ η A B) (⟦ b ⟧ η δ (⟦ A ⟧′ η))
+⟦ $ {B = B} b A ⟧ η δ = proj₁ (⟦subst₁⟧′ η A B) (⟦ b ⟧ η δ (⟦ A ⟧′ η))
 
 {-----------------------------------------------------------------------
 Now let's move on to a *relational* interpretation of Types.
@@ -315,7 +365,7 @@ typerel η₁ η₂ ρ (∀′ ℓ B) f₁ f₂ = ∀ A₁ A₂ R → typerel (c
 wkᴿ : ∀ {Δ ℓ ℓ'} {η₁ η₂ : TEnv Δ} {ρ : RTEnv Δ η₁ η₂} {A₁ A₂ : Set ℓ'} {R : A₁ → A₂ → Set ℓ'}
        (B : Type Δ ℓ) (a₁ : ⟦ B ⟧′ η₁) (a₂ : ⟦ B ⟧′ η₂) →
        typerel η₁ η₂ ρ B a₁ a₂ ≡
-       typerel (cons {ℓ = ℓ'} η₁ A₁) (cons {ℓ = ℓ'} η₂ A₂) (consᴿ ρ R) (weaken B) (coe (⟦wk⟧′ η₁ A₁ B) a₁) (coe (⟦wk⟧′ η₂ A₂ B) a₂)
+       typerel (cons {ℓ = ℓ'} η₁ A₁) (cons {ℓ = ℓ'} η₂ A₂) (consᴿ ρ R) (weaken B) (proj₁ (⟦wk⟧′ η₁ A₁ B) a₁) (proj₁ (⟦wk⟧′ η₂ A₂ B) a₂)
 wkᴿ B a₁ a₂ = {!   !}
 
 subst₁ᴿ : ∀ {Δ Γ ℓ ℓ'} (η₁ η₂ : TEnv Δ) (ρ : RTEnv Δ η₁ η₂) (δ₁ : Env Γ η₁) (δ₂ : Env Γ η₂)
@@ -323,8 +373,8 @@ subst₁ᴿ : ∀ {Δ Γ ℓ ℓ'} (η₁ η₂ : TEnv Δ) (ρ : RTEnv Δ η₁ 
           typerel (cons {ℓ = ℓ} η₁ (⟦ A ⟧′ η₁)) (cons {ℓ = ℓ} η₂ (⟦ A ⟧′ η₂)) (consᴿ ρ (typerel η₁ η₂ ρ A))
                   B (⟦ b ⟧ η₁ δ₁ (⟦ A ⟧′ η₁)) (⟦ b ⟧ η₂ δ₂ (⟦ A ⟧′ η₂)) ≡
           typerel η₁ η₂ ρ (subst₁ B A)
-                  (coe (⟦subst₁⟧′ η₁ A B) (⟦ b ⟧ η₁ δ₁ (⟦ A ⟧′ η₁)))
-                  (coe (⟦subst₁⟧′ η₂ A B) (⟦ b ⟧ η₂ δ₂ (⟦ A ⟧′ η₂)))
+                  (proj₁ (⟦subst₁⟧′ η₁ A B) (⟦ b ⟧ η₁ δ₁ (⟦ A ⟧′ η₁)))
+                  (proj₁ (⟦subst₁⟧′ η₂ A B) (⟦ b ⟧ η₂ δ₂ (⟦ A ⟧′ η₂)))
 subst₁ᴿ η₁ η₂ ρ δ₁ δ₂ A B = {!   !}
 
 {-------------------------------------------------------------------------
