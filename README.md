@@ -47,6 +47,7 @@ A collection of random snippets and scraps of mostly Idris, Agda, and Rocq files
   (see [Notes on Propositional Equality](https://ionathan.ch/2021/05/25/notes-on-equality.html)).
 * DIP.ced: Demonstration that Cedille refutes UIP due to the Kleene trick.
 * ObsEq.agda: An attempt at encoding observational equality à la Tarski as recursion over codes.
+* K.lean: Pattern-matching in Lean proves propositional K/UIP, in case you were wondering.
 
 ## Guarded Types and Coinduction
 * Guardedness.agda: Some examples of coprograms that don't pass productivity checking.
