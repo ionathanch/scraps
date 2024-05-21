@@ -54,7 +54,7 @@ accessible : ∀ (s : Ord) → Acc s
 accessible (↑ s) = acc (λ { r (↑s≤↑s r≤s) → acc (λ t t<r → (accessible s).acc< t (s≤s≤s t<r r≤s)) })
 accessible (⊔ f) = acc (λ { r (s≤⊔f f a r<fa) → (accessible (f a)).acc< r r<fa })
 
--- ...except the infinity size
+-- ...except the infinity ordinal
 ¬accessible∞ : Acc ∞ → ⊥
 ¬accessible∞ (acc p) = ¬accessible∞ (p ∞ ∞<∞)
 

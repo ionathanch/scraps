@@ -1,0 +1,13 @@
+cabal-version: 3.6
+name:          Dyna
+version:       0
+
+executable dyna
+  main-is: Dyna.hs
+  default-extensions:
+    TypeSynonymInstances,
+    FlexibleInstances
+  build-depends:
+    base,
+    comonad
+  ghc-options: -Wincomplete-patterns
