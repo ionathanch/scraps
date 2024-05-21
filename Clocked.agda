@@ -353,3 +353,44 @@ module stream (D : Set₁) where
       let rhd ∷ rtl = outF r
           shd ∷ stl = outF s
       in inFκ ((rhd * shd) ∷ map κ (λ f → zipF κ (f rtl s , f r stl)) ▹shuffle)) r s
+
+{-
+* A clock constant is not enough!
+  With induction under clocks, we can define a function
+    (∀ κ → ℙ S P (X κ)) → ℙ (∀ κ → S) (λ s → ∀ κ → P (s κ)) (∀ κ → X κ),
+  but we cannot further eliminate clock quantification of the parameters
+  without using a clock irrelevance axiom to define the following function:
+    ℙ (∀ κ → S) (λ s → ∀ κ → P (s κ)) (∀ κ → X κ) → ℙ S P (∀ κ → X κ).
+  Destructing the argument into its components
+    s : ∀ κ → S
+    f : (∀ κ → P (s κ)) → (∀ κ → X κ),
+  we can produce the first component with a clock constant κ₀ by
+    s′ = s κ₀ : S,
+  but if we try to proceed in the direct way to produce the second component,
+    f′ = λ p → f (λ κ → ?) : P s′ → (∀ κ → X κ)
+  we run into the issue where we need to provide a `P (s κ)`,
+  but we only have a `P (s κ₀)`, with no guarantee that `κ₀ ≡ κ`.
+* Induction under clocks is not enough!
+  Correctly encoding a stream type requires that its parameter be clock-irrelevant:
+    unκ : (∀ κ → A) → A
+  However, because unκ is used in fcomm which in turn is used in outF,
+  now outF will no longer compute on inF:
+    outF (inF x) ⇒ unκ (λ κ → x .hd) ∷ x .tl ⇏ x .hd ∷ x .tl ⇒ x,
+  not unless unκ reduces further somehow.
+  Clock irrelevance can be proven for inductive types using induction under clocks,
+  such as for the naturals:
+    ℕunκ = elimℕ (λ _ → ℕ) zero (λ _ → succ) : (∀ κ → ℕ) → ℕ
+  But while we can show the required equality
+    ℕunκeq : ∀ n → ℕunκ (λ κ → n) ≡ n
+    ℕunκeq zero = refl
+    ℕunκeq (succ n) = cong succ (ℕunκeq n)
+  it still doesn't reduce from left to right!
+  Furthermore, there are other noninductive types for which we can't induct under clocks,
+  such as the identity type, if for some reason we want a stream of identity functions.
+  We can once again use the clock constant κ₀,
+    idunκ : (∀ κ → A → B) → (A → B)
+    idunκ f = f κ₀
+  but now we can't prove the following lemma required for showing `inF (outF x) ≡ x`
+    idunκeq : ∀ f κ → idunκ f ≡ f κ
+  without once again a guarantee that `κ₀ ≡ κ`.
+-}
