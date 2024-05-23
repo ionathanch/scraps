@@ -52,6 +52,8 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 ## Models
 * DeBruijn.idr: Syntax and typing of a simple dependently-typed language using de Bruijn indices.
   A context well-formedness judgement appears to be missing.
+* Autophagy.agda: Intrinsically-typed syntax for type theory following
+  [Type Theory Should Eat Itself](https://jmchapman.io/papers/lfmtp08_jmc.pdf).
 * IndInd.agda: An attempt at encoding an inductive–inductive type in Agda as a mutual indexed type;
   there appears to be a problem with the elimination principle.
   (See [Constructing Inductive-Inductive Types via Type Erasure](https://eutypes.cs.ru.nl/eutypes_pmwiki/uploads/Main/books-of-abstracts-TYPES2019.pdf#page=20).)
