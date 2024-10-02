@@ -47,15 +47,16 @@ Definition ℙ X := X → P.
 Definition U : 𝒰 := ∀ X, ℙ X.
 (* Set Universe Checking. *)
 
-(*
-  A ⊲ B says that A is a retract of B,
-  where usually B is bigger than A,
-  and there's 
-  if there is a retraction from B to A
-  such that
-*)
+(*--------------------------------------------------------------------------
+  A ⊲ B says that A is a retract of B, which says that A is included in B:
+  there is an inclusion A → B and a retract B → A
+  that maps the inclusion back to the original elements.
+  In other words, the inclusion is an injection,
+  and B must be at least as large as A.
+  The goal is to show that ℙ U ⊲ U.
+--------------------------------------------------------------------------*)
 Definition retract (A B : 𝒰) :=
-  { g : A → B & { f : B → A & (λ x, g (f x)) = (λ x, x)}}.
+  { g : B → A & { f : A → B & (λ x, g (f x)) = (λ x, x)}}.
 Notation "A ⊲ B" := (retract A B) (at level 70).
 
 (*----------------------------------------------------------------------------
@@ -63,17 +64,17 @@ Notation "A ⊲ B" := (retract A B) (at level 70).
   if ℙ A ⊲ ℙ B → ∃ g, f. g ∘ f = id, then ∃ g, f. ℙ A ⊲ ℙ B → g ∘ f = id.
 ----------------------------------------------------------------------------*)
 Lemma t A B
-  : { g : ℙ A → ℙ B & {f : ℙ B → ℙ A & ℙ A ⊲ ℙ B → (λ x, g (f x)) = (λ x, x)}}.
+  : { g : ℙ B → ℙ A & {f : ℙ A → ℙ B & ℙ A ⊲ ℙ B → (λ x, g (f x)) = (λ x, x)}}.
 Proof.
   destruct (EM (ℙ A ⊲ ℙ B)) as [(g & f & e) | e].
   * exists g, f. tauto.
   * exists (λ _ x, p1), (λ _ x, p1). contradiction.
 Qed.
 
-(* This is a retraction from ℙ U to U. *)
+(* This is an injection from ℙ U to U whose retract is {u ↦ u U}. *)
 Definition injU : ℙ U → U := λ pu X,
-  match t U U, t U X with
-  | existT _ _ (existT _ psi _), existT _ phi _ => phi (psi pu)
+  match t U U, t X U with
+  | existT _ _ (existT _ phi _), existT _ psi _ => psi (phi pu)
   end.
 
 (* Given any mapping U → U, it has a fixed point. *)
