@@ -11,8 +11,11 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
   Type checking with this implementation does terminate, but with the flag set and the actual record does not.
 * Hurkens: Yet another "implementation" of Hurkens' paradox,
   using universe polymorphism to try to get it to type check as far as possible.
-* Berardi.agda: An adaptation of the inconsistency arising from impredicativity, AoC, and EM from
+* Berardi: An adaptation of the inconsistency arising from excluded middle, impredicativity,
+  and large elimination of (small) impredicatives from
   [Proof-irrelevance out of excluded-middle and choice in the calculus of constructions](https://doi.org/10.1017/S0956796800001829).
+  Crucially, EM and impredicativity alone imply proof irrelevance,
+  while proof irrelevance is directly inconsistent with large elimination.
 * StrictPositivity: An adaptation of [this proof](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/)
   that non-strictly positive inductive types with an impredicative universe is inconsistent.
 * NestedPositivity.lean: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
