@@ -69,11 +69,7 @@ r∈r≡r∉r : r ∈ r ≡ (¬ r ∈ r)
 r∈r≡r∉r = cong (λ f → f Russell r) projᵤ∘injᵤ
 
 r∉r : ¬ r ∈ r
-r∉r r∈r =
-  let r∈r→r∉r = subst id r∈r≡r∉r
-  in r∈r→r∉r r∈r r∈r
+r∉r r∈r = subst id r∈r≡r∉r r∈r r∈r
 
 false : ⊥
-false =
-  let r∉r→r∈r = subst id (sym r∈r≡r∉r)
-  in r∉r (r∉r→r∈r r∉r)
+false = r∉r (subst id (sym r∈r≡r∉r) r∉r)

@@ -14,11 +14,11 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 * Berardi.agda: An adaptation of the inconsistency arising from impredicativity, AoC, and EM from
   [Proof-irrelevance out of excluded-middle and choice in the calculus of constructions](https://doi.org/10.1017/S0956796800001829).
 * StrictPositivity: An adaptation of [this proof](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/)
-  that non-strictly positive inductive types with an impredicative universe yields `Void`.
+  that non-strictly positive inductive types with an impredicative universe is inconsistent.
 * NestedPositivity.lean: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
 * SizedFalse.agda: A few short proofs of false using sized types.
 * CoquandGirard.agda: Abandoned attempt at mechanizing Girard's original paradox as described by Coquand.
-* WFU: Coquand's Paradox of Trees, an inductive flavour of Burali-Forti's paradox.
+* Trees: Coquand's Paradox of Trees, an inductive flavour of Burali-Forti's paradox.
 * PropImpred.lean: Not an inconsistency, but a reproduction of the proof in
   [this paper](https://doi.org/10.23638/LMCS-16(2:14)2020)
   that impredicativity with some form of computing proof-irrelevance yields non-normalization.
