@@ -1,65 +1,97 @@
-{-# OPTIONS --rewriting #-}
+{-# OPTIONS --rewriting --with-K #-}
 
-open import Data.Empty
-open import Data.Product
-open import Agda.Builtin.Unit
-open import Agda.Builtin.Equality.Rewrite
-open import Relation.Binary.PropositionalEquality.Core
+open import Relation.Binary.PropositionalEquality
+  using (_≡_ ; refl ; sym ; trans ; cong ; module ≡-Reasoning)
+  renaming (subst to transp)
+open ≡-Reasoning
+open import Agda.Builtin.Unit using (⊤ ; tt)
+open import Data.Empty using (⊥)
+open import Data.Product.Base using (Σ-syntax ; ∃-syntax ; _×_ ; _,_)
 
-{-------------------------------------------------------------
+{-# BUILTIN REWRITE _≡_ #-}
+
+{-----------------------------------------------------------
   This model is modelled after Conor McBride's
     Outrageous but Meaningful Coincidences (2010),
   https://personal.cis.strath.ac.uk/conor.mcbride/pub/DepRep/DepRep.pdf.
   It wasn't designed for modelling via CwFs,
   but it fits and I think is more nicely structured.
 
-  Some assumptions:
-  * We have a well-founded set of levels,
-    i.e. with a strict transitive order
-    s.t. all levels are accessible.
-  * Function extensionality.
-  From funext we can show that accessibility predicates
+  The model is parametrized over well-founded levels,
+  i.e. levels with a strict transitive order
+  s.t. all levels are accessible.
+  We also assume that that accessibility predicates
   are mere propositions (all propositionally equal),
   and for convenience mere propness computes to refl
-  on definitionally equal proofs of accessibility.
--------------------------------------------------------------}
+  on definitionally equal proofs of accessibility
+  (which requires --with-K).
+-----------------------------------------------------------}
 
-module StraTT (Level : Set)
-             (_<_ : Level → Level → Set)
-             (trans< : ∀ {i j k} → i < j → j < k → i < k) where
+module StraTT
+  (Level : Set)
+  (_<_ : Level → Level → Set)
+  (trans< : ∀ {i j k} → i < j → j < k → i < k)
+  where
 
-coe : ∀ {A B : Set} → A ≡ B → A → B
-coe refl A = A
+funeq : ∀ {A₁ A₂ : Set} {B : A₂ → Set} (p : A₁ ≡ A₂) →
+  ((a : A₂) → B a) ≡ ((a : A₁) → B (transp _ p a))
+funeq refl = refl
 
 record Acc (k : Level) : Set where
   pattern
   inductive
   constructor acc<
-  field acc : ∀ j → j < k → Acc j
+  field acc : ∀ {j} → j < k → Acc j
 open Acc
-
-data _≤_ j k : Set where
-  lt : j < k → j ≤ k
-  eq : j ≡ k → j ≤ k
 
 postulate
   funext' : ∀ {ℓ₁ ℓ₂} {A : Set ℓ₁} {B : A → Set ℓ₂} →
-    (f g : ∀ {x} → B x) → (∀ x → f {x} ≡ g {x}) → (λ {x} → f {x}) ≡ (λ {x} → g {x})
+    {f g : ∀ {x} → B x} → (∀ x → f {x} ≡ g {x}) → (λ {x} → f {x}) ≡ (λ {x} → g {x})
   funext : ∀ {ℓ₁ ℓ₂} {A : Set ℓ₁} {B : A → Set ℓ₂} →
-    (f g : ∀ x → B x) → (∀ x → f x ≡ g x) → f ≡ g
-
-funeq : ∀ {A₁ A₂ : Set} {B : A₂ → Set} (p : A₁ ≡ A₂) →
-  ((a : A₂) → B a) ≡ ((a : A₁) → B (coe p a))
-funeq refl = refl
+    {f g : ∀ x → B x} → (∀ x → f x ≡ g x) → f ≡ g
 
 accProp : ∀ {k} (p q : Acc k) → p ≡ q
-accProp (acc< f) (acc< g) = cong acc< (funext _ _ (λ j → funext _ _ (λ j<k → accProp (f j j<k) (g j j<k))))
+accProp (acc< f) (acc< g) = cong acc< (funext' (λ j → funext (λ j<k → accProp (f j<k) (g j<k))))
 
-accPropRefl : ∀ {k} (p : Acc k) → accProp p p ≡ refl
-accPropRefl p with accProp p p
-... | refl = refl
+accPropRefl : ∀ {k} (acc : Acc k) → accProp acc acc ≡ refl
+accPropRefl acc with refl ← accProp acc acc = refl
 
+-- This fails confluence checking as accProp reduces on acc<
 {-# REWRITE accPropRefl #-}
+
+{-----------------------------------------------------------
+  This is the desired direct model of universes,
+  which isn't valid since it fails strict positivity:
+  the domain el j A could return U j if A is Û.
+  However, its level must be strictly smaller,
+  so the model is in fact valid,
+  but we must induct on accessibility of levels
+  to convince Agda of this fact.
+-----------------------------------------------------------}
+
+module direct where
+  data U (k : Level) : Set
+  el : ∀ k → U k → Set
+
+  {-# NO_POSITIVITY_CHECK #-}
+  data U k where
+    Û : U k
+    ⊥̂ : U k
+    Π̂ : ∀ j → j < k → (A : U j) → (el j A → U k) → U k
+
+  el k Û = U k
+  el k ⊥̂  = ⊥
+  el k (Π̂ j j<k A B) = (x : el j A) → el k (B x)
+
+  lift : ∀ {j k} → j < k → U j → U k
+  lift _ Û = Û
+  lift _ ⊥̂ = ⊥̂
+  lift j<k (Π̂ i i<j A B) = Π̂ i (trans< i<j j<k) A (λ a → lift j<k (B a))
+
+  el→ : ∀ {j k} → (j<k : j < k) → ∀ u → el j u → el k (lift j<k u)
+  el→ j<k Û = lift j<k
+  el→ _ ⊥̂  ()
+  el→ j<k (Π̂ i i<j A B) b a = el→ j<k (B a) (b a)
 
 {-----------------------------------------------------------
   A universe of codes U' at level k, and
@@ -69,24 +101,23 @@ accPropRefl p with accProp p p
   with themselves inductively over accessibility.
 -----------------------------------------------------------}
 
-data U' k (U< : ∀ j → j < k → Set) (el< : ∀ j (j<k : j < k) → U< j j<k → Set) : Set where
-  Û : ∀ j → j ≤ k → U' k U< el<
+data U' k (U< : ∀ {j} → j < k → Set) (el< : ∀ {j} (j<k : j < k) → U< j<k → Set) : Set where
+  Û : U' k U< el<
   ⊥̂ : U' k U< el<
   →̂ : U' k U< el< → U' k U< el< → U' k U< el<
-  Π̂ : ∀ j → (j<k : j < k) → (A : U< j j<k) → (el< j j<k A → U' k U< el<) → U' k U< el<
+  Π̂ : ∀ j → (j<k : j < k) → (A : U< j<k) → (el< j<k A → U' k U< el<) → U' k U< el<
 
-el' : ∀ k (U< : ∀ j → j < k → Set) (el< : ∀ j (j<k : j < k) → U< j j<k → Set) → U' k U< el< → Set
-el' k U< el< (Û k (eq refl)) = U' k U< el<
-el' k U< el< (Û j (lt j<k))  = U' j (λ i i<j → U< i (trans< i<j j<k)) (λ i i<j → el< i (trans< i<j j<k))
+el' : ∀ k (U< : ∀ {j} → j < k → Set) (el< : ∀ {j} (j<k : j < k) → U< j<k → Set) → U' k U< el< → Set
+el' k U< el< Û = U' k U< el<
 el' k U< el< ⊥̂  = ⊥
 el' k U< el< (→̂ A B) = el' k U< el< A → el' k U< el< B
-el' k U< el< (Π̂ j j<k A B) = (a : el< j j<k A) → el' k U< el< (B a)
+el' k U< el< (Π̂ j j<k A B) = (a : el< j<k A) → el' k U< el< (B a)
 
-U<  : ∀ {k} → Acc k → ∀ j → j < k → Set
-el< : ∀ {k} (p : Acc k) j (j<k : j < k) → U< p j j<k → Set
+U<  : ∀ {k} → Acc k → ∀ {j} → j < k → Set
+el< : ∀ {k} (p : Acc k) {j} (j<k : j < k) → U< p j<k → Set
 
-U<  (acc< f) j j<k = U'  j (U< (f j j<k)) (el< (f j j<k))
-el< (acc< f) j j<k = el' j (U< (f j j<k)) (el< (f j j<k))
+U<  (acc< f) {j} j<k = U'  j (U< (f j<k)) (el< (f j<k))
+el< (acc< f) {j} j<k = el' j (U< (f j<k)) (el< (f j<k))
 
 {-----------------------------------------------------------
   Universes are cumulative:
@@ -101,58 +132,58 @@ el< (acc< f) j j<k = el' j (U< (f j j<k)) (el< (f j j<k))
 -----------------------------------------------------------}
 
 el'≡1 : ∀ {k} {acc₁ acc₂ : Acc k} (A : U' k (U< acc₁) (el< acc₁)) →
-  let A' = subst (λ a → U' k (U< a) (el< a)) (accProp acc₁ acc₂) A
+  let A' = transp (λ a → U' k (U< a) (el< a)) (accProp acc₁ acc₂) A
   in el' k (U< acc₂) (el< acc₂) A' ≡ el' k (U< acc₁) (el< acc₁) A
 el'≡1 {k} {acc₁} {acc₂} A =
   cong (λ a → el' k (U< a) (el< a)
-                  (subst (λ a → U' k (U< a) (el< a))
-                         (accProp acc₁ a) A))
+                  (transp (λ a → U' k (U< a) (el< a))
+                          (accProp acc₁ a) A))
        (accProp acc₂ acc₁)
 
 el'→1 : ∀ {k} {acc₁ acc₂ : Acc k} (A : U' k (U< acc₁) (el< acc₁)) →
-  let A' = subst (λ a → U' k (U< a) (el< a)) (accProp acc₁ acc₂) A
+  let A' = transp (λ a → U' k (U< a) (el< a)) (accProp acc₁ acc₂) A
   in el' k (U< acc₂) (el< acc₂) A' → el' k (U< acc₁) (el< acc₁) A
-el'→1 A = coe (el'≡1 A)
+el'→1 A = transp (λ T → T) (el'≡1 A)
 
 lift' : ∀ {j k} (accj : Acc j) (acck : Acc k) → j < k → U' j (U< accj) (el< accj) → U' k (U< acck) (el< acck)
-lift' _ _ j<k (Û j (eq refl)) = Û j (lt j<k)
-lift' _ _ j<k (Û i (lt i<j)) = Û i (lt (trans< i<j j<k))
+lift' _ _ _ Û = Û
 lift' _ _ _ ⊥̂  = ⊥̂
 lift' accj acck j<k (→̂  A B) = →̂  (lift' accj acck j<k A) (lift' accj acck j<k B)
-lift' {j} {k} (acc< f) (acc< g) j<k (Π̂ i i<j A B) =
-  Π̂ i (trans< i<j j<k) _ (λ a → lift' (acc< f) (acc< g) j<k (B (el'→1 {i} {f i i<j} {g i (trans< i<j j<k)} A a)))
+lift' accj@(acc< f) acck@(acc< g) j<k (Π̂ i i<j A B) =
+  Π̂ i (trans< i<j j<k) _ (λ a → lift' accj acck j<k (B (el'→1 {i} {f i<j} {g (trans< i<j j<k)} A a)))
 
-U'≡1 : ∀ {k} (f g : ∀ j → j < k → Acc j) →
-  U' k (U< (acc< f)) (el< (acc< f)) ≡ U' k (U< (acc< g)) (el< (acc< g))
-U'≡1 {k} f g =
-  cong (λ fg → U' k (U< (acc< fg)) (el< (acc< fg)))
-        (funext _ _ (λ j → funext _ _ (λ j<k → accProp (f j j<k) (g j j<k))))
-
+-- Clearly this doesn't hold for Û : U j, since el j Û ≡ U j ≢ U k ≡ el k (lift j<k Û).
 el'≡ : ∀ {j k} (accj : Acc j) (acck : Acc k) (j<k : j < k) (u : U' j (U< accj) (el< accj)) →
   el' j (U< accj) (el< accj) u ≡ el' k (U< acck) (el< acck) (lift' accj acck j<k u)
-el'≡ (acc< f) (acc< g) j<k (Û j (eq refl)) =
-  U'≡1 f (λ i i<j → g i (trans< i<j j<k))
-el'≡ (acc< f) (acc< g) j<k (Û i (lt i<j)) =
-  U'≡1 (λ h h<i → f h (trans< h<i i<j))
-       (λ h h<i → g h (trans< h<i (trans< i<j j<k)))
-el'≡ _ _ _ ⊥̂  = refl
+el'≡ (acc< f) (acc< g) j<k Û = {!   !}
+el'≡ accj acck j<k ⊥̂  = refl
 el'≡ accj acck j<k (→̂  A B)
   rewrite el'≡ accj acck j<k A
   rewrite el'≡ accj acck j<k B = refl
 el'≡ {j} {k} (acc< f) (acc< g) j<k (Π̂ i i<j A B) = trans p q where
   p : (∀ a → el' j _ _ (B a)) ≡ (∀ a → el' k _ _ (lift' _ _ j<k (B a)))
-  p = cong (λ f → ∀ a → f a) (funext _ _ (λ a → el'≡ _ _ j<k (B a)))
+  p = cong (λ f → ∀ a → f a) (funext (λ a → el'≡ _ _ j<k (B a)))
   q : (∀ a → el' k _ _ (lift' _ _ j<k (B a))) ≡
       (∀ a → el' k _ _ (lift' _ _ j<k (B (el'→1 A a))))
   q = funeq (el'≡1 A)
 
+-- This doesn't hold for A →̂  B : U j,
+-- since we're given b : el j A → el j B and a : el k (lift j<k A),
+-- and the argument a can't be lowered from k to j to fit into the function b.
+el'→ : ∀ {j k} (accj : Acc j) (acck : Acc k) (j<k : j < k) (u : U' j (U< accj) (el< accj)) →
+  el' j (U< accj) (el< accj) u → el' k (U< acck) (el< acck) (lift' accj acck j<k u)
+el'→ accj acck j<k Û = lift' accj acck j<k
+el'→ _ _ j<k ⊥̂  = λ b → b
+el'→ (acc< f) (acc< g) j<k (→̂  A B) b a = {!   !}
+el'→ accj@(acc< f) acck@(acc< g) j<k (Π̂ i i<j A B) b a =
+  let a' = el'→1 A a in el'→ accj acck j<k (B a') (b a')
+
+{-----------------------------------------------------------
+  Universes, their interpretations, and cumulativity,
+  instantiated over well-foundedness of levels.
+-----------------------------------------------------------}
+
 module _ (wf : ∀ k → Acc k) where
-
-  {-----------------------------------------------------------
-    Universes, their interpretations, and cumulativity,
-    instantiated over well-foundedness of levels.
-  -----------------------------------------------------------}
-
   U : ∀ k → Set
   U k = U' k (U< (wf k)) (el< (wf k))
 
@@ -165,13 +196,16 @@ module _ (wf : ∀ k → Acc k) where
   el≡ : ∀ {j k} → (j<k : j < k) → ∀ u → el j u ≡ el k (lift j<k u)
   el≡ = el'≡ (wf _) (wf _)
 
-  {-----------------------------------------------------------
-    Inductively-defined contexts and their interpretations
-    as nested dependent pairs, or "dependent lists".
-    The types of semantic types and terms Ty, Tm are defined
-    mutually but they don't have to be; they can come after.
-  -----------------------------------------------------------}
-  
+  el→ : ∀ {j k} → (j<k : j < k) → ∀ u → el j u → el k (lift j<k u)
+  el→ = el'→ (wf _) (wf _)
+
+{-----------------------------------------------------------
+  Inductively-defined contexts and their interpretations
+  as nested dependent pairs, or "dependent lists".
+  The types of semantic types and terms Ty, Tm are defined
+  mutually but they don't have to be; they can come after.
+-----------------------------------------------------------}
+
   data C : Set
   em : C → Set
 
@@ -189,32 +223,35 @@ module _ (wf : ∀ k → Acc k) where
   em ∙ = ⊤
   em (Γ ▷ A) = Σ[ γ ∈ em Γ ] el _ (A γ)
 
-  {-----------------------------------------------------------
-    Cumulativity tells us that we are allowed to lift types
-    from lower levels to higher ones,
-    as well as terms to ones typed at higher levels.
-    I believe terms are in fact equal to their lifts,
-    but the equality types are tricky to transport,
-    and we don't need that fact anyway.
-  -----------------------------------------------------------}
+{-----------------------------------------------------------
+  Cumulativity tells us that we are allowed to lift types
+  from lower levels to higher ones,
+  as well as terms to ones typed at higher levels.
+  I believe terms are in fact equal to their lifts,
+  but the equality types are tricky to transport,
+  and we don't need that fact anyway.
+-----------------------------------------------------------}
 
   liftTy : ∀ {j k Γ} → j < k → Ty j Γ → Ty k Γ
   liftTy j<k ty γ = lift j<k (ty γ)
 
   liftTm : ∀ {j k Γ A} → (j<k : j < k) → Tm j Γ A → Tm k Γ (liftTy j<k A)
-  liftTm {A = A} j<k tm γ rewrite sym (el≡ j<k (A γ)) = tm γ
+  liftTm {A = A} j<k tm γ = el→ j<k (A γ) (tm γ)
 
-  {-----------------------------------------------------------
-    Contexts C is a category with a terminal element,
-    where morphisms (substitutions) are functions from
-    (the interpretations of) one context to another.
-    Ty and Tm are Fam-valued presheaves over C,
-    whose actions on substitutions are actually applying
-    the substitutions to the type or term.
-  -----------------------------------------------------------}
+{-----------------------------------------------------------
+  Contexts C is a category with a terminal element,
+  where morphisms (substitutions) are functions from
+  (the interpretations of) one context to another.
+  Ty and Tm are Fam-valued presheaves over C,
+  whose actions on substitutions are actually applying
+  the substitutions to the type or term.
+-----------------------------------------------------------}
 
   _⇒_ : C → C → Set
   Δ ⇒ Γ = em Δ → em Γ
+
+  id : ∀ {Γ} → Γ ⇒ Γ
+  id γ = γ
 
   ⟨⟩ : ∀ {Γ} → Γ ⇒ ∙
   ⟨⟩ {Γ} _ = tt
@@ -230,12 +267,16 @@ module _ (wf : ∀ k → Acc k) where
   _[_]ᵗ : ∀ {k Δ Γ} {A : Ty k Γ} → Tm k Γ A → (σ : Δ ⇒ Γ) → Tm k Δ (A [ σ ]ᵀ)
   (a [ σ ]ᵗ) δ = a (σ δ)
 
-  {-----------------------------------------------------------
-    Context comprehensions conventionally come with
-    substitution extension and their projections,
-    but since our contexts are inductively constructed,
-    these are straightforward and rather redundant.
-  -----------------------------------------------------------}
+  infix 30 _∋_[_]ᵗ
+  _∋_[_]ᵗ : ∀ {k Δ Γ} → (A : Ty k Γ) → Tm k Γ A → (σ : Δ ⇒ Γ) → Tm k Δ (A [ σ ]ᵀ)
+  A ∋ a [ σ ]ᵗ = a [ σ ]ᵗ
+
+{-----------------------------------------------------------
+  Context comprehensions conventionally come with
+  substitution extension and their projections,
+  but since our contexts are inductively constructed,
+  these are straightforward and rather redundant.
+-----------------------------------------------------------}
 
   ⟨_,_⟩ : ∀ {k Δ Γ} {A : Ty k Γ} → (σ : Δ ⇒ Γ) → Tm k Δ (A [ σ ]ᵀ) → Δ ⇒ (Γ ▷ A)
   ⟨ σ , a ⟩ δ = σ δ , a δ
@@ -249,10 +290,83 @@ module _ (wf : ∀ k → Acc k) where
   pqη : ∀ {k Γ} {A : Ty k Γ} → ⟨ p {k} {Γ} {A} , q {k} {Γ} {A} ⟩ ≡ λ γ → γ
   pqη = refl
 
-  {-----------------------------------------------------------
-    Modelling context membership and extracting a term.
-    A more inductivey and expanded version of p/q I think.
-  -----------------------------------------------------------}
+{-----------------------------------------------------------
+  Additional structures for dependent functions,
+  nondependent functions, and the empty type,
+  along with the βη laws they satisfy.
+  Note that Ty k Γ is equal to Tm k Γ (λ _ → Û),
+  so types are also terms of U k (i.e. à la Russell).
+-----------------------------------------------------------}
+
+  Pi : ∀ {j k Γ} → j < k → (A : Ty j Γ) → (B : Ty k (Γ ▷ A)) → Ty k Γ
+  Pi {j} {k} {Γ} j<k A B γ with wf k
+  ... | acc< f rewrite accProp (wf j) (f j<k) = Π̂ j j<k (A γ) (λ a → B (γ , a))
+
+  dlam : ∀ {j k Γ} {j<k : j < k} {A : Ty j Γ} {B : Ty k (Γ ▷ A)}
+         → Tm k (Γ ▷ A) B → Tm k Γ (Pi j<k A B)
+  dlam {j} {k} {Γ} {j<k} b γ with wf k
+  ... | acc< f rewrite accProp (wf j) (f j<k) = λ a → b (γ , a)
+
+  dapp : ∀ {j k Γ} {j<k : j < k} {A : Ty j Γ} {B : Ty k (Γ ▷ A)}
+         → Tm k Γ (Pi j<k A B) → (a : Tm j Γ A) → Tm k Γ (B [ ⟨ id , a ⟩ ]ᵀ)
+  dapp {j} {k} {Γ} {j<k} b a γ with wf k
+  ... | acc< f rewrite accProp (wf j) (f j<k) = b γ (a γ)
+
+  Πβ : ∀ {j k Γ} {j<k : j < k} {A : Ty j Γ} {B : Ty k (Γ ▷ A)} {b : Tm k (Γ ▷ A) B} {a : Tm j Γ A}
+       → dapp {j<k = j<k} (dlam b) a ≡ b [ ⟨ id , a ⟩ ]ᵗ
+  Πβ {j} {k} {Γ} {j<k} with wf k
+  ... | acc< f rewrite accProp (wf j) (f j<k) = refl
+
+  -- Πη : ∀ {j k Γ} {j<k : j < k} {A : Ty j Γ} {B : Ty k (Γ ▷ A)} {f : Tm k Γ (Pi j<k A B)}
+  --      → dlam (dapp (f [ p ]ᵗ) q) ≡ f
+
+{-----------------------------------------------------------
+  The type of the η-equivalence law doesn't type check
+  because of all the accProp nonsense in the middle,
+  but we can computationally verify that:
+    dlam (dapp (f [ p ]ᵗ) q) γ
+    ≡ λ a → dapp (f [ p ]ᵗ) q (γ , a)         by dlam
+    ≡ λ a → (f [ p ]ᵗ) (γ , a) (q (γ , a))    by dapp
+    ≡ λ a → (f [ p ]ᵗ) (γ , a) a              by q
+    ≡ λ a → f (p (γ , a)) a                   by _[_]ᵗ
+    ≡ λ a → f γ a                             by p
+    ≡ f γ                                     by Agda's η-equivalence
+  It may be reassuring to note that this does hold for Arr
+  definitionally as shown in →η below.
+-----------------------------------------------------------}
+
+  Arr : ∀ {k Γ} → (A B : Ty k Γ) → Ty k Γ
+  Arr A B γ = →̂  (A γ) (B γ)
+
+  lam : ∀ {k Γ} {A B : Ty k Γ} → Tm k (Γ ▷ A) (B [ p ]ᵀ) → Tm k Γ (Arr A B)
+  lam b γ a = b (γ , a)
+
+  app : ∀ {k Γ} {A B : Ty k Γ} → Tm k Γ (Arr A B) → Tm k Γ A → Tm k Γ B
+  app b a γ = b γ (a γ)
+
+  →β : ∀ {k Γ} {A B : Ty k Γ} {b : Tm k (Γ ▷ A) (B [ p ]ᵀ)} {a : Tm k Γ A}
+       → app (lam b) a ≡ b [ ⟨ id , a ⟩ ]ᵗ
+  →β = refl
+
+  →η : ∀ {k Γ} {A B : Ty k Γ} {f : Tm k Γ (Arr A B)} → lam (app (Arr A B ∋ f [ p ]ᵗ) q) ≡ f
+  →η = refl
+
+  Empty : ∀ {k Γ} → Ty k Γ
+  Empty γ = ⊥̂
+
+  absurd : ∀ {k Γ} {A : Ty k Γ} → Tm k Γ Empty → Tm k Γ A
+  absurd b γ with () <- b γ
+
+  Type : ∀ {k Γ} → Ty k Γ
+  Type {k} _ = Û
+
+  TmU≡Ty : ∀ {k Γ} → Tm k Γ Type ≡ Ty k Γ
+  TmU≡Ty = refl
+
+{-----------------------------------------------------------
+  Modelling context membership and extracting a term.
+  A more inductivey and expanded version of p/q I think.
+-----------------------------------------------------------}
 
   data _∋_ : ∀ {k} Γ → Ty k Γ → Set where
     here : ∀ {k Γ A} → Γ ▷ A ∋ A [ p {k} ]ᵀ
@@ -261,3 +375,11 @@ module _ (wf : ∀ k → Acc k) where
   en : ∀ {k Γ A} → Γ ∋ A → Tm k Γ A
   en here (γ , a) = a
   en (there where?) (γ , a) = en where? γ
+
+{-----------------------------------------------------------
+  Consistency: For all levels,
+  there is no inhabitant of the empty type.
+-----------------------------------------------------------}
+
+  consistency : ∀ k → Tm k ∙ Empty → ⊥
+  consistency k b = b tt
