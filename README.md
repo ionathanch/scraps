@@ -94,3 +94,5 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 * CastTpEq.ced: The Cast and TpEq constructs used in various Cedille developments, also found in the [core library](https://github.com/cedille/cedille/tree/master/new-lib/core).
 * Mendler: Mendler-style encodings of (weak, strong) induction in Cedille.
 * Injectivity.ced: An old attempt at proving injectivity of constructors in Cedille.
+* MutualInd.lean: A minimal working example of a mutual inductive predicate in Lean
+  where neither induction nor structural recursion work are available (as of v4.13.0-rc3).
