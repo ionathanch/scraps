@@ -64,6 +64,7 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 * Kipling.agda: The Kipling embedding from [Outrageous but Meaningful Coincidences](https://personal.cis.strath.ac.uk/conor.mcbride/pub/DepRep/DepRep.pdf).
 * CwF.agda, CwFModel.agda: A definition of a category with families in Agda, complete with equalities that must be satisfied,
   and a model using induction–recursion to define type encodings.
+* cwf.lean: Categories with families as a typeclass in Lean.
 * Universes.lagda.md: Various ways to model a universe hierarchy.
 * StraTT.agda: A model of the universes of stratified type theory with explicit universe levels.
   The actual structures for the types are excluded because working with accessibility predicates is too messy.
