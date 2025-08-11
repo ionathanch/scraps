@@ -1,0 +1,296 @@
+% Naturals (for indexing)
+LF nat : type =
+| O : nat
+| S : nat → nat
+;
+
+% Expressions
+LF exp : type =
+| Prop  : exp
+| Type  : nat → exp
+| Π     : exp → (exp → exp) → exp          % Dependent function types: Π(x:A).B
+| λ     : exp → (exp → exp) → exp          % Functions: λ(x:A).B
+| app   : exp → exp → exp                  % Applications: e e
+| Σ     : exp → (exp → exp) → exp          % Dependent pair types: Σ(x:A).B
+| pair  : exp → exp → exp → exp            % Pairs: ⟨e, e⟩ as T
+| fst   : exp → exp                        % First projection: π₁ e
+| snd   : exp → exp                        % Second projection: π₂ e
+| bool  : exp | true  : exp | false : exp  % Booleans: true | false
+| iff   : exp → exp → exp → exp            % Dependent conditionals: if e then e else e
+| def   : exp → (exp → exp) → exp          % Definitions: let x = e in e
+;
+
+% Values
+LF value : exp → type =
+| val-true : value true
+| val-false : value false
+;
+
+% Assignment
+LF eq : exp → exp → type =
+| refl : eq T T
+;
+
+% Reduction
+LF red : exp → exp → type =
+| β  : red (app (λ _ (\x. E1 x)) E2) (E1 E2)
+| π1 : red (fst (pair E1 _ _)) E1
+| π2 : red (snd (pair _ E2 _)) E2
+| ι1 : red (iff true E1 _) E1
+| ι2 : red (iff false _ E2) E2
+| δ  : {x:exp} → eq x E → red x E
+| ζ  : red (def E1 E2) (E2 E1)
+;
+
+% Conversion
+LF conv : exp → exp → type =
+| conv-refl :  conv E E
+
+| conv-trans : red E1 E2 →
+               conv E2 E3 →
+             % ----------
+               conv E1 E2
+
+| conv-Π :    conv A A' →
+              ({x:exp} %{typ x A' →}% conv (B x) (B' x)) →
+            % ----------------------
+              conv (Π A B) (Π A' B')
+
+| conv-λ :    conv A A' →
+              ({x:exp} %{typ x A' →}% conv (E x) (E' x)) →
+            % ----------------------
+              conv (λ A E) (λ A' E')
+
+| conv-app :  conv E1 E1' →
+              conv E2 E2' →
+            % ------------------------------
+              conv (app E1 E2) (app E1' E2')
+
+| conv-Σ :    conv A A' →
+              ({x:exp} %{typ x A' →}% conv (B x) (B' x)) →
+            % ----------------------
+              conv (Σ A B) (Σ A' B')
+
+| conv-pair : conv E1 E1' →
+              conv E2 E2' →
+              conv T T' →
+            % -------------------------------------
+              conv (pair E1 E2 T) (pair E1' E2' T')
+
+| conv-fst :  conv E E' →
+            % ---------------------
+              conv (fst E) (fst E')
+
+| conv-snd :  conv E E' →
+            % ---------------------
+              conv (snd E) (snd E')
+
+| conv-iff :  conv E1 E1' →
+              conv E2 E2' →
+              conv E3 E3' →
+            % -------------------------------------
+              conv (iff E1 E2 E3) (iff E1' E2' E3')
+
+| conv-def :  conv E1 E1' →
+              ({x:exp} eq x E1' → conv (E2 x) (E2' x)) →
+            % ------------------------------
+              conv (def E1 E2) (def E1' E2')
+;
+
+% Confluence
+LF confl : exp → exp → exp → type =
+| confl-conv : conv E1 E →
+               conv E2 E →
+             % -------------
+               confl E1 E2 E
+;
+
+% Equivalence
+LF equiv : exp → exp → type =
+| equiv-conv : conv E1 E →
+               conv E2 E →
+             % -----------
+               equiv E1 E2
+
+| equiv-η1 :   conv E1 (λ A E) →
+               conv E2 E2' →
+               {x:exp} %{typ x A →}% equiv (E x) (app E2' x) →
+             % -----------
+               equiv E1 E2
+
+| equiv-η2 :   conv E1 E1' →
+               conv E2 (λ A E) →
+               {x:exp} %{typ x A →}% equiv (app E1' x) (E x) →
+             % -----------
+               equiv E1 E2
+;
+
+% Subtyping
+LF sub : exp → exp → type =
+| sub-equiv : equiv A B →
+            % -------
+              sub A B
+
+| sub-trans : sub A B →
+              sub B C →
+            % -------
+              sub A C
+
+| sub-Prop :  sub Prop (Type O)
+
+| sub-cumul : sub (Type n) (Type (S n))
+
+| sub-Π :     sub A2 A1 →
+              {x:exp} %{typ x A2 →}% sub (B1 x) (B2 x) →
+            % -----------------------
+              sub (Π A1 B1) (Π A2 B2)
+
+| sub-Σ :     sub A1 A2 →
+              {x:exp} %{typ x A1 →}% sub (B1 x) (B2 x) →
+            % -----------------------
+              sub (Σ A1 B1) (Σ A2 B2)
+;
+
+% Typing
+LF typ : exp → exp → type =
+| typ-Prop :   typ Prop (Type O)
+| typ-Type :   typ (Type n) (Type (S n))
+
+| typ-Π-Prop : typ A (Type _) →
+               ({x:exp} typ x A → typ (B x) Prop) →
+             % ----------------
+               typ (Π A B) Prop
+
+| typ-Π-Type : typ A (Type n) →
+               ({x:exp} typ x A → typ (B x) (Type n)) →
+             % --------------------
+               typ (Π A B) (Type n)
+
+| typ-λ :      typ A (Type _) ->
+               ({x:exp} typ x A → typ (E x) (B x)) →
+             % -------------------
+               typ (λ A E) (Π A B)
+
+| typ-app :    typ E1 (Π A B) →
+               typ E2 A →
+             % ----------------------
+               typ (app E1 E2) (B E2)
+
+| typ-Σ :      typ A (Type n) →
+               ({x:exp} typ x A → typ (B x) (Type n)) →
+             % --------------------
+               typ (Σ A B) (Type n)
+
+| typ-pair :   typ T (Type _) →
+               equiv T (Σ A B) →
+               typ E1 A →
+               typ E2 (B E1) →
+             % --------------------------
+               typ (pair E1 E2 T) (Σ A B)
+
+| typ-fst :    typ E (Σ A _) →
+             % -------------
+               typ (fst E) A
+
+| typ-snd :    typ E (Σ _ B) →
+             % -----------------------
+               typ (snd E) (B (fst E))
+
+| typ-bool :   typ bool Prop
+| typ-true :   typ true bool
+| typ-false :  typ false bool
+
+| typ-iff :    ({x:exp} typ x bool → typ (B x) (Type _)) →
+               typ E bool →
+               typ E1 (B true) →
+               typ E2 (B false) →
+             % -----------------------
+               typ (iff E E1 E2) (B E)
+
+| typ-def :    typ E1 A →
+               ({x:exp} eq x E1 → typ x A → typ (E2 x) (B x)) →
+             % ----------------------
+               typ (def E1 E2) (B E1)
+
+| typ-sub :    typ E A →
+               %typ B (Type _) →
+               sub A B →
+             % -------
+               typ E B
+;
+
+% Evaluation
+LF eval : exp → exp → type =
+| evaluate : typ E bool → value V → conv E V → eval E V
+;
+
+% Substitution lemmas
+% If A == B, then T[x:=A] == T[x:=B]
+rec lem_equiv_subst : {T:[x:exp ⊢ exp]} [ ⊢ equiv A B] → [ ⊢ equiv T[A] T[B]] =
+mlam T ⇒ fn e ⇒
+case [x:exp ⊢ T] of
+| [x:exp ⊢ Prop]     ⇒ [ ⊢ equiv-conv conv-refl conv-refl]
+| [x:exp ⊢ (Type _)] ⇒ [ ⊢ equiv-conv conv-refl conv-refl]
+| [x:exp ⊢ (Π T1[x] (\y. T2[y, x]))] ⇒ ? % FIXME: Can't prove this
+;
+
+% If A == B and ⊢ E : T[x:=A], then ⊢ E : T[x:=B]
+rec lem_typ_equiv : {T:[x:exp ⊢ exp]} [ ⊢ equiv A B] → [ ⊢ typ E T[A]] → [ ⊢ typ E T[B]] =
+mlam T ⇒ fn e ⇒ fn t ⇒
+let [ ⊢ D1] = t in
+let [ ⊢ D2] = lem_equiv_subst [x:exp ⊢ T] e in
+[ ⊢ typ-sub D1 (sub-equiv D2)]
+;
+
+% If A |>* C *<| B, then T[x:=A] |>* C' *<| T[x:=B]
+schema ctx = exp;
+rec lem_confl_subst : {γ:ctx} {T:[x:exp ⊢ exp]} [γ ⊢ confl A B C] → [γ ⊢ confl T[A] T[B] C'] =
+mlam γ ⇒ mlam T ⇒ fn c ⇒
+case [x:exp ⊢ T] of
+| [x:exp ⊢ (Π T1[x] (\y. T2[y, x]))] ⇒ % FIXME: Unclosed expression type from lem_confl_subst
+  let [γ ⊢ confl-conv D11 D12] : [γ ⊢ confl T1[A] T1[B] C1] =
+    lem_confl_subst [γ] [x:exp ⊢ T1] c in
+  let [γ, y:exp ⊢ confl-conv D21 D22] : [γ, y:exp ⊢ confl T2[y, A] T2[y, B] C2] =
+    lem_confl_subst [γ, y:exp] [x:exp ⊢ T2] in
+  [γ ⊢ confl-conv (conv-Π D11 D21) (conv-Π D12 D22)]
+;
+
+% If A |>* C *<| B and ⊢ E : T[x:=A], then ⊢ E : T[x:=B]
+rec lem_typ_confl : {T:[x:exp ⊢ exp]} [ ⊢ confl A B C] → [ ⊢ typ E T[A]] → [ ⊢ typ E T[B]] =
+mlam T ⇒ fn c ⇒ fn t ⇒
+let [ ⊢ D1] = t in % FIXME: Unclosed expression type from lem_confl_subst
+let [ ⊢ confl-conv D2 D3] = lem_confl_subst [] [x:exp ⊢ T] c in
+[ ⊢ typ-sub D1 (sub-equiv (equiv-conv D2 D3))]
+;
+
+% Subject reduction
+rec SR : [ ⊢ typ E T] → [ ⊢ red E E'] → [ ⊢ typ E' T] =
+fn t ⇒ fn r ⇒
+case r of
+| [ ⊢ β] ⇒
+  let [ ⊢ typ-app (typ-λ _ (\x. \d. D1)) D2] = t in
+  [ ⊢ D1[_, D2]]
+| [ ⊢ π1] ⇒
+  let [ ⊢ typ-fst (typ-pair _ _ D1 _)] = t in
+  [ ⊢ D1]
+| [ ⊢ π2] ⇒
+  let [ ⊢ typ-snd D1] = t in
+  % D2 : typ E2 B[E1]
+  let [ ⊢ typ-pair _ _ _ D2] : [ ⊢ typ _ (Σ _ (\x. B))] = [ ⊢ D1] in
+  % Proof that E1 == fst (pair E1 E2 T)
+  let fst_pair = [ ⊢ equiv-conv conv-refl (conv-trans π1 conv-refl)] in
+  % Proof that E1 |>* E *<| fst (pair E1 E2 T)
+  % let fst_pair = [ ⊢ confl-conv conv-refl (conf-trans π1 conf-refl)] in
+  % D2 : E2 B[fst (pair E1 E2 T)]
+  lem_typ_equiv [x:exp ⊢ B] fst_pair [ ⊢ D2]
+| [ ⊢ ι1] ⇒
+  let [ ⊢ typ-iff (\x. \d. _) _ D1 _] = t in
+  [ ⊢ D1]
+| [ ⊢ ι2] ⇒
+  let [ ⊢ typ-iff (\x. \d. _) _ _ D2] = t in
+  [ ⊢ D2]
+| [ ⊢ δ E refl] ⇒ t
+| [ ⊢ ζ] ⇒
+  let [ ⊢ typ-def D1 (\x. \e. \d. D2)] = t in
+  [ ⊢ D2[_, refl, D1]]
+;
