@@ -1,6 +1,10 @@
 # Mechanizations of ECC
 
-This repository contains various different very incomplete mechanizations of Luo's Extended Calculus of Constructions, usually with a few additions:
+N.B. This directory was added from an independent repo using `git subtree`,
+and so file histories are broken across the merge.
+To see older history of `ECC/<file>`, use `git log --follow -- <file>` in the root directory.
+
+This directory contains various different very incomplete mechanizations of Luo's Extended Calculus of Constructions, usually with a few additions:
 
 * Local definitions (let expressions), with or without type annotations
 * Booleans with dependent conditionals (elimination)
