@@ -19,6 +19,7 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 * StrictPositivity: An adaptation of [this proof](http://vilhelms.github.io/posts/why-must-inductive-types-be-strictly-positive/)
   that non-strictly positive inductive types with an impredicative universe is inconsistent.
 * NestedPositivity.lean: Showing that if you don't respect nested positivity, you can derive `False` using impredicative `Prop`.
+* Typecase.idr: A simple paradox from typecasing on a negative type in `Type`.
 * SizedFalse.agda: A few short proofs of false using sized types.
 * CoquandGirard.agda: Abandoned attempt at mechanizing Girard's original paradox as described by Coquand.
 * Trees: Coquand's Paradox of Trees, an inductive flavour of Burali-Forti's paradox.
@@ -64,6 +65,7 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 * Kipling.agda: The Kipling embedding from [Outrageous but Meaningful Coincidences](https://personal.cis.strath.ac.uk/conor.mcbride/pub/DepRep/DepRep.pdf).
 * CwF.agda, CwFModel.agda: A definition of a category with families in Agda, complete with equalities that must be satisfied,
   and a model using induction–recursion to define type encodings.
+* CwFSize.agda: Abandoned attempt at CwFs for sized dependent types.
 * cwf.lean: Categories with families as a typeclass in Lean.
 * Universes.lagda.md: Various ways to model a universe hierarchy.
 * StraTT.agda: A model of the universes of stratified type theory with explicit universe levels.
@@ -73,6 +75,7 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
   extended with a parametricity theorem.
 * VeryDependent.agda: Attempting to use Agda issue [#1556](https://github.com/agda/agda/issues/1556)
   to implement intrinsically-typed syntax, but blocked on renaming.
+* HOAS.idr: Various ways to represent higher-order abstract syntax for call-by-push-value.
 
 ## Programs
 
@@ -97,3 +100,4 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 * Injectivity.ced: An old attempt at proving injectivity of constructors in Cedille.
 * MutualInd.lean: A minimal working example of a mutual inductive predicate in Lean
   where neither induction nor structural recursion work are available (as of v4.13.0-rc3).
+* Acc.lean: Unfolding accessibility recursors for an inconsistent (i.e. reflexive) order.
