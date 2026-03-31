@@ -89,8 +89,7 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 * Dyna: Various recursion schemes, including histomorphisms and dynamorphisms.
 * Fib.agda: The nth Fibonacci number via instance search of a data type encoding the recursive structure of computing them
   (for @braxtonhall).
-* QS.agda: An attempt at formalizing the quicksort example from [this Tweet](https://twitter.com/jonmsterling/status/1444640259552251921)
-  originally found in [Modelling General Recursion in Type Theory](http://dx.doi.org/10.1017/S0960129505004822) but failed at Step 3.
+* inversion.lean: An `inversion` tactic that generalizes indices before performing `cases`.
 
 ## Miscellaneous Proofs
 
@@ -101,3 +100,5 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 * MutualInd.lean: A minimal working example of a mutual inductive predicate in Lean
   where neither induction nor structural recursion work are available (as of v4.13.0-rc3).
 * Acc.lean: Unfolding accessibility recursors for an inconsistent (i.e. reflexive) order.
+* QS.agda: An attempt at formalizing the quicksort example from [this Tweet](https://twitter.com/jonmsterling/status/1444640259552251921)
+  originally found in [Modelling General Recursion in Type Theory](http://dx.doi.org/10.1017/S0960129505004822) but failed at Step 3.
