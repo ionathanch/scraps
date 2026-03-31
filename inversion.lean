@@ -3,6 +3,7 @@ module
 public meta import Lean.Elab.Tactic.ElabTerm
 public meta import Lean.Meta.Tactic.Generalize
 public meta import Lean.Meta.Tactic.Cases
+public meta import Lean.Meta.Tactic.Contradiction
 
 namespace Lean.Elab.Tactic
 open Meta
@@ -31,7 +32,9 @@ public meta def evalInversion : Tactic := λ stx ↦
         | throwTacticEx `inversion mvarId m!"failed to generalize argument"
       mvarId.withContext do
         let subgoals ← mvarId.cases newTarget.fvarId!
-        replaceMainGoal $ subgoals.toList.map (·.mvarId)
+        let subgoals := subgoals.map (·.mvarId)
+        let subgoals ← subgoals.filterM (not <$> ·.contradictionCore {})
+        replaceMainGoal $ subgoals.toList
     | none =>
       throwTacticEx `inversion mvarId
         m!"target is not an inductive type{indentExpr targetType}"
@@ -41,4 +44,4 @@ end Tactic
 
 example (f : Nat → Nat) (n : Nat) (le : f n ≤ 0) : f n = 0 := by
   -- cases le /- Dependent elimination failed: Failed to solve equation 0 = f n -/
-  inversion le; rfl; contradiction
+  inversion le; rfl
