@@ -8,37 +8,31 @@ public meta import Lean.Meta.Tactic.Contradiction
 namespace Lean.Elab.Tactic
 open Meta
 
-syntax (name := inversion)
-  "inversion " term : tactic
-
-@[tactic inversion]
-public meta def evalInversion : Tactic := λ stx ↦
-  match stx with
-  | `(tactic| inversion $targetName:term) => withMainContext do
-    let mvarId ← getMainGoal
-    let target ← elabTerm targetName none
-    let targetId := target.fvarId!
-    let targetType ← inferType target
-    let targetType ← whnf targetType
-    let ⟨indName, args⟩ := targetType.getAppFnArgs
-    match ← isInductive? indName with
-    | some indVal =>
-      let indices := args.drop indVal.numParams
-      let nonvars := indices.filter (not ·.isFVar)
-      let genargs : Array GeneralizeArg :=
-        nonvars.map ({ expr := ·, xName? := some .anonymous, hName? := some .anonymous })
-      let ⟨substs, _, mvarId⟩ ← mvarId.generalizeHyp genargs #[targetId]
-      let .some newTarget := substs.map.find? targetId
-        | throwTacticEx `inversion mvarId m!"failed to generalize argument"
-      mvarId.withContext do
-        let subgoals ← mvarId.cases newTarget.fvarId!
-        let subgoals := subgoals.map (·.mvarId)
-        let subgoals ← subgoals.filterM (not <$> ·.contradictionCore {})
-        replaceMainGoal $ subgoals.toList
-    | none =>
-      throwTacticEx `inversion mvarId
-        m!"target is not an inductive type{indentExpr targetType}"
-  | _ => throwErrorAt stx "could not parse inversion tactic"
+elab "inversion " targetName:term : tactic => withMainContext do
+  let mvarId ← getMainGoal
+  let target ← elabTerm targetName none
+  let targetId := target.fvarId!
+  let targetName ← targetId.getUserName
+  let targetType ← inferType target
+  let targetType ← whnf targetType
+  let ⟨indName, args⟩ := targetType.getAppFnArgs
+  match ← isInductive? indName with
+  | some indVal =>
+    let indices := args.drop indVal.numParams
+    let nonvars := indices.filter (not ·.isFVar)
+    let genargs : Array GeneralizeArg :=
+      nonvars.map ({ expr := ·, hName? := some (← mkFreshUserName $ targetName.append `eq) })
+    let ⟨substs, _, mvarId⟩ ← mvarId.generalizeHyp genargs #[targetId]
+    let .some newTarget := substs.map.find? targetId
+      | throwTacticEx `inversion mvarId m!"failed to generalize argument"
+    mvarId.withContext do
+      let subgoals ← mvarId.cases newTarget.fvarId!
+      let subgoals := subgoals.map (·.mvarId)
+      let subgoals ← subgoals.filterM (not <$> ·.contradictionCore {})
+      replaceMainGoal $ subgoals.toList
+  | none =>
+    throwTacticEx `inversion mvarId
+      m!"target is not an inductive type{indentExpr targetType}"
 
 end Tactic
 
