@@ -1,9 +1,6 @@
 module
 
 public meta import Lean
-meta import Lean.PrettyPrinter
-meta import Lean.Parser.Extension
-meta import all Lean.Parser.Basic
 
 set_option autoImplicit false
 set_option pp.proofs true
@@ -17,55 +14,8 @@ public inductive HTML where
   | mk : String → List Attribute → List HTML → HTML
   | mkClos : String → List Attribute → HTML
 
-def nilAttrs : List Attribute := []
-
-meta section
-open Lean Elab Meta Term Parser Syntax
-
-abbrev textKind : SyntaxNodeKind := `text
-
-partial def textFnAux (startPos : String.Pos.Raw)  : ParserFn := fun c s =>
-  let i := s.pos
-  if h : c.atEnd i then mkNodeToken textKind startPos true c s
-  else
-    let curr := c.get' i h
-    if curr == '<' then
-      mkNodeToken textKind startPos true c s
-    else
-      let s := s.setPos (c.next' i h)
-      textFnAux startPos c s
-
-def textFn (expected : List String := []) : ParserFn := fun c s =>
-  let i := s.pos
-  if c.atEnd i then s.mkEOIError expected
-  else
-    let tkc := s.cache.tokenCache
-    if tkc.startPos == i then
-      let s := s.pushSyntax tkc.token
-      s.setPos tkc.stopPos
-    else
-      let s := textFnAux i c s
-      updateTokenCache i s
-
-def textNoAntiquot : Parser := {
-  fn   := textFn
-  info := mkAtomicInfo "text"
-}
-
-open PrettyPrinter Formatter in
-@[combinator_formatter textNoAntiquot]
-def textNoAntiquot.formatter : Formatter :=
-  visitAtom textKind
-
-open PrettyPrinter Parenthesizer in
-@[combinator_parenthesizer textNoAntiquot]
-def textNoAntiquot.parenthesizer : Parenthesizer :=
-  visitToken
-
 declare_syntax_cat attrib
 declare_syntax_cat html
-
-public def text : Parser := withAntiquot (mkAntiquot "text" textKind) textNoAntiquot
 
 -- `class` is a Lean keyword and also an HTML attribute name,
 -- so we use `rawIdent` to ignore reserved keywords
@@ -77,6 +27,9 @@ syntax (name := attribBool) rawIdent : attrib
 syntax (name := html) "<" rawIdent attrib* ">" html* "</" rawIdent ">" : html
 syntax (name := htmlClos) "<" rawIdent attrib* "/>" : html
 syntax (name := htmlText) str : html
+
+meta section
+open Lean Elab Meta Term
 
 def Lean.HTMLTypeLit : Expr := (.const ``HTML [])
 def Lean.attributeTypeLit : Expr := (.const ``_root_.Attribute [])
