@@ -23,6 +23,7 @@ A collection of random snippets and scraps of mostly Agda, Rocq, Idris, and Lean
 * SizedFalse.agda: A few short proofs of false using sized types.
 * CoquandGirard.agda: Abandoned attempt at mechanizing Girard's original paradox as described by Coquand.
 * Trees: Coquand's Paradox of Trees, an inductive flavour of Burali-Forti's paradox.
+  The Idris version is entirely linear.
 * PropImpred.lean: Not an inconsistency, but a reproduction of the proof in
   [this paper](https://doi.org/10.23638/LMCS-16(2:14)2020)
   that impredicativity with some form of computing proof-irrelevance yields non-normalization.
