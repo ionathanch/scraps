@@ -1,0 +1,15 @@
+package scraps
+
+modules = DeBruijn,
+          ECC.ECC,
+          ECC.PTS,
+          ECC.README,
+          ECC.Shifted,
+          HOAS,
+          Hedberg,
+          Hurkens,
+          IncrementalCycles,
+          Ordinals,
+          StrictPositivity,
+          Trees,
+          Typecase
